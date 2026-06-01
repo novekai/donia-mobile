@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParams } from './types';
 import { MainTabs } from './MainTabs';
+import { navigationRef } from '../lib/navigationRef';
 
 // Auth
 import { SplashScreen } from '../screens/auth/SplashScreen';
@@ -60,7 +61,7 @@ const Stack = createNativeStackNavigator<RootStackParams>();
 
 export function RootNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
