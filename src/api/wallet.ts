@@ -17,6 +17,22 @@ export function topupCode(code: string): Promise<{ credited: string; gross: stri
   return apiPost('/v1/wallet/topup/code', { code });
 }
 
+export type CodePreview = {
+  code: string;
+  amount: number;
+  commission: number;
+  commissionRate: number;
+  net: number;
+  occasion: string;
+  themeKey: string;
+  palette: string;
+  senderName: string;
+};
+
+export function previewTopupCode(code: string): Promise<CodePreview> {
+  return apiGet<CodePreview>(`/v1/wallet/topup/code/${encodeURIComponent(code)}/preview`);
+}
+
 export function getRecentTopups(): Promise<{ recent: Transaction[] }> {
   return apiGet('/v1/wallet/topup/recent');
 }
