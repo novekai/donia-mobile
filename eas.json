@@ -34,6 +34,9 @@
       "android": {
         "buildType": "app-bundle"
       },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://donia-api-production.up.railway.app"
       }
