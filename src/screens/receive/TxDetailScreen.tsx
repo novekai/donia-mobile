@@ -1,8 +1,8 @@
 // TxDetail — fetches the real card from the API and renders the right state
 // (success / pending payment / failed). Replaces the previous mocked layout.
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, AppState } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ConcentricRings } from '../../components/deco/ConcentricRings';
@@ -143,6 +143,7 @@ const STATE_BY_STATUS: Record<CardModel['status'], StateMeta> = {
 
 export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDetail'>) {
   const txId = route.params?.txId;
+  const queryClient = useQueryClient();
   const [resending, setResending] = React.useState(false);
 
   const cardQuery = useQuery({
@@ -154,6 +155,17 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
     // the FedaPay webhook lands.
     refetchInterval: (q) => (q.state.data?.status === 'CREATED' ? 5000 : false),
   });
+
+  // When the user returns to the app (e.g. from the FedaPay payment page in
+  // the browser), refetch immediately instead of waiting up to 5 seconds.
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && txId) {
+        queryClient.invalidateQueries({ queryKey: ['card', txId] });
+      }
+    });
+    return () => sub.remove();
+  }, [txId, queryClient]);
 
   async function onResend() {
     if (!cardQuery.data) return;

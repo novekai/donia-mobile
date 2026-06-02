@@ -84,8 +84,18 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
     }
     setLoading(true);
     try {
+      // For WhatsApp delivery: if the user typed a custom WhatsApp number
+      // (different from the recipient phone), use it instead so the card is
+      // delivered to the right WhatsApp account. The "recipient" is still
+      // tracked for redemption.
+      const customWa = recipientWaInput.trim();
+      const deliveryPhone =
+        channel === 'whatsapp' && customWa && customWa !== recipientPhone
+          ? customWa
+          : recipientPhone;
+
       const body = {
-        recipientPhone,
+        recipientPhone: deliveryPhone,
         recipientName,
         recipientEmail: channel === 'email' ? recipientEmailInput.trim() : undefined,
         amount: amountNum,
