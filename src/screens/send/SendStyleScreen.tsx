@@ -21,33 +21,44 @@ const SWATCHES: string[] = [
   '#FDF7F6', '#FFFFFF', '#2A0F1A', '#6F4A5A',
 ];
 
+// Both short keys ('anniv', 'amour', …) and long keys ('anniversaire', …) are
+// supported so the SendCategory screen and the future Designer-driven catalogue
+// can both feed this screen with a category key that matches.
 const CATEGORY_LABEL: Record<string, string> = {
+  bonjour: 'Bonjour',
+  anniv: 'Anniversaire',
   anniversaire: 'Anniversaire',
-  'saint-valentin': 'Saint-Valentin',
-  mariage: 'Mariage',
-  condoleances: 'Condoléances',
   bravo: 'Bravo',
+  amour: "Je t'aime",
+  jetaime: "Je t'aime",
+  'saint-valentin': 'Saint-Valentin',
+  condo: 'Condoléances',
+  condoleances: 'Condoléances',
+  mariage: 'Mariage',
   noel: 'Noël',
   tabaski: 'Tabaski',
   naissance: 'Naissance',
   'bon-voyage': 'Bon voyage',
   goshop: 'GoShop',
-  bonjour: 'Bonjour',
   diplome: 'Diplôme',
 };
 
 const CATEGORY_GREETING: Record<string, string> = {
+  bonjour: 'Bonjour à toi,',
+  anniv: 'Joyeux anniversaire,',
   anniversaire: 'Joyeux anniversaire,',
-  'saint-valentin': 'Je t’aime,',
-  mariage: 'Tous mes vœux,',
-  condoleances: 'Toute ma compassion,',
   bravo: 'Bravo champion·ne,',
+  amour: 'Je t’aime,',
+  jetaime: 'Je t’aime,',
+  'saint-valentin': 'Je t’aime,',
+  condo: 'Toute ma compassion,',
+  condoleances: 'Toute ma compassion,',
+  mariage: 'Tous mes vœux,',
   noel: 'Joyeux Noël,',
   tabaski: 'Bonne fête de Tabaski,',
   naissance: 'Félicitations,',
   'bon-voyage': 'Bon voyage,',
   goshop: 'Pour toi,',
-  bonjour: 'Bonjour à toi,',
   diplome: 'Bravo pour ton diplôme,',
 };
 
