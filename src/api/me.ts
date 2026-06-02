@@ -30,3 +30,15 @@ export async function uploadAvatar(uri: string): Promise<{ user: User }> {
 export function deleteAvatar(): Promise<{ user: User }> {
   return apiDelete<{ user: User }>('/v1/me/avatar');
 }
+
+// RGPD : suppression définitive du compte. L'utilisateur doit retaper "SUPPRIMER"
+// pour confirmer (anti-erreur). Le backend anonymise toutes les PII, révoque les
+// sessions, supprime les tokens push et désactive les liens anonymes. Les transactions
+// financières sont conservées (obligation BCEAO 10 ans).
+export async function deleteAccount(): Promise<{ ok: true }> {
+  // apiDelete ne supporte pas de body, on passe par api.delete directement.
+  const { data } = await api.delete<{ ok: true }>('/v1/me', {
+    data: { confirmation: 'SUPPRIMER' },
+  });
+  return data;
+}

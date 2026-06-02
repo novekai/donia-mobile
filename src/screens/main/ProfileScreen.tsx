@@ -12,7 +12,7 @@ import { IconArrowL, IconChevR, IconCamera, IconLogout } from '../../components/
 import { colors, radius, shadow } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps, RootStackParams } from '../../navigation/types';
-import { getMe, uploadAvatar, deleteAvatar } from '../../api/me';
+import { getMe, uploadAvatar, deleteAvatar, deleteAccount } from '../../api/me';
 import { getReferral } from '../../api/referral';
 import { listTransactions } from '../../api/transactions';
 import { getApiErrorMessage } from '../../api/client';
@@ -71,6 +71,48 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
         },
       },
     ]);
+  }
+
+  function onDeleteAccount() {
+    // Double confirmation pour éviter les suppressions accidentelles. Conforme RGPD.
+    Alert.alert(
+      'Supprimer ton compte ?',
+      'Cette action est définitive. On supprime :\n\n• Ton nom, email, téléphone, photo\n• Tes liens anonymes et tes messages\n• Tes documents KYC\n\nOn garde, pour des raisons légales BCEAO :\n• Tes transactions financières (10 ans)\n\nTu ne pourras plus te reconnecter avec ce numéro.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Continuer',
+          style: 'destructive',
+          onPress: () => {
+            // 2e confirmation finale
+            Alert.alert(
+              'Confirmation finale',
+              'Es-tu absolument sûr·e ? Cette action est irréversible.',
+              [
+                { text: 'Non, annuler', style: 'cancel' },
+                {
+                  text: 'Oui, supprimer définitivement',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteAccount();
+                      queryClient.clear();
+                      signOut();
+                      Alert.alert(
+                        'Compte supprimé',
+                        'Ton compte a été supprimé. Tes données ont été effacées conformément au RGPD.',
+                      );
+                    } catch (e) {
+                      Alert.alert('Suppression échouée', getApiErrorMessage(e));
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
   }
 
   async function pickAndUpload(source: 'camera' | 'library') {
@@ -240,6 +282,10 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
             <IconLogout color={colors.coralDeep} />
             <Text style={styles.logoutText}>Se déconnecter</Text>
           </Pressable>
+
+          <Pressable onPress={onDeleteAccount} style={styles.deleteBtn}>
+            <Text style={styles.deleteText}>Supprimer mon compte</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -272,4 +318,6 @@ const styles = StyleSheet.create({
   badgeText: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.bg },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(232,60,90,0.25)', backgroundColor: 'transparent' },
   logoutText: { fontFamily: fonts.displaySemiBold, fontSize: 14, color: colors.coralDeep },
+  deleteBtn: { alignItems: 'center', justifyContent: 'center', marginTop: 14, paddingVertical: 12 },
+  deleteText: { fontFamily: fonts.bodyRegular, fontSize: 12, color: colors.ink3, textDecorationLine: 'underline' },
 });
