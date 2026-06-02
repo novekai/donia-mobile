@@ -238,7 +238,9 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
           <Row label="Téléphone" value={formatPhone(card.recipientPhone)} />
           <Row label="Opérateur" value={operator} />
           <Row label="Montant de la carte" value={`${formatAmount(card.amount)} FCFA`} accent bold />
-          <Row label="Référence" value={card.redeemCode} mono />
+          {/* Hide the redeem code while the payment is still pending — it
+              should never be shared before the card has actually been paid. */}
+          {card.status !== 'CREATED' && <Row label="Référence" value={card.redeemCode} mono />}
           <Row label="Date" value={formatDate(card.createdAt)} last />
         </Card>
       </ScrollView>
