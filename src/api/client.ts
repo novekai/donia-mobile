@@ -21,14 +21,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Auto-logout on 401 (token expired/revoked)
+// Auto-logout on 401 (token expired/revoked). We tag the error so the UI layer
+// can show a friendly "Session expirée" instead of the raw axios "Network Error"
+// message that 401s sometimes surface as on React Native.
 api.interceptors.response.use(
   (r) => r,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       const store = useAuthStore.getState();
       if (store.token) {
-        // Token invalid → force logout
+        (error as AxiosError & { isSessionExpired?: boolean }).isSessionExpired = true;
         store.signOut();
       }
     }
@@ -39,10 +41,17 @@ api.interceptors.response.use(
 // Surface domain error message from backend (which returns {error: {code, message}})
 export function getApiErrorMessage(e: unknown): string {
   if (axios.isAxiosError(e)) {
+    if ((e as AxiosError & { isSessionExpired?: boolean }).isSessionExpired) {
+      return 'Session expirée. Reconnecte-toi pour continuer.';
+    }
     const data = e.response?.data as { error?: { message?: string } } | undefined;
-    return data?.error?.message ?? e.message;
+    if (data?.error?.message) return data.error.message;
+    if (e.message === 'Network Error') {
+      return 'Impossible de joindre le serveur. Vérifie ta connexion internet et réessaie.';
+    }
+    return e.message;
   }
-  return e instanceof Error ? e.message : 'Unknown error';
+  return e instanceof Error ? e.message : 'Erreur inconnue';
 }
 
 // Convenience typed helpers

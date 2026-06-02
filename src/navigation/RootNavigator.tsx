@@ -1,10 +1,22 @@
 // RootNavigator — stack racine : auth + main tabs + écrans modaux (push)
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParams } from './types';
 import { MainTabs } from './MainTabs';
 import { navigationRef } from '../lib/navigationRef';
+import { useAuthStore } from '../store/auth';
+
+const AUTH_ROUTES = new Set<string>([
+  'Splash',
+  'Onb1',
+  'Onb2',
+  'Onb3',
+  'Login',
+  'Signup',
+  'OTP',
+  'ForgotPassword',
+]);
 
 // Auth
 import { SplashScreen } from '../screens/auth/SplashScreen';
@@ -60,6 +72,24 @@ import { AnonymesReportScreen } from '../screens/anonymes/AnonymesReportScreen';
 const Stack = createNativeStackNavigator<RootStackParams>();
 
 export function RootNavigator() {
+  const token = useAuthStore((s) => s.token);
+  const prevTokenRef = useRef<string | null>(token);
+
+  // When the token transitions to null while we're on an authenticated screen,
+  // bounce the user back to Login (covers both explicit signOut() and the 401
+  // interceptor wiping the token). We don't touch the stack if we're already
+  // on an auth screen — that would create a navigation loop on cold start.
+  useEffect(() => {
+    const prev = prevTokenRef.current;
+    prevTokenRef.current = token;
+    if (prev && !token && navigationRef.isReady()) {
+      const current = navigationRef.getCurrentRoute()?.name;
+      if (!current || !AUTH_ROUTES.has(current)) {
+        navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+      }
+    }
+  }, [token]);
+
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
