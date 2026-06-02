@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Share,
+  RefreshControl,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
@@ -61,7 +62,13 @@ function ShareBtn({
 
 export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>) {
   const bobStyle = useBob();
-  const referralQuery = useQuery({ queryKey: ['referral'], queryFn: getReferral });
+  const referralQuery = useQuery({
+    queryKey: ['referral'],
+    queryFn: getReferral,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
 
   async function onCopy(code: string) {
     // We don't bundle expo-clipboard yet — fall back to Share so the user can
@@ -119,7 +126,16 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
       <FunBackground palette="cream" />
       <ScreenHeader title="Inviter des amis" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 32 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={referralQuery.isFetching}
+            onRefresh={() => referralQuery.refetch()}
+            tintColor={colors.coral}
+          />
+        }
+      >
         <BrandGradient variant="indigo" style={[styles.hero, shadow.indigo]}>
           <View style={{ position: 'absolute', top: -80, left: '50%', marginLeft: -130, opacity: 0.3 }}>
             <SunRays size={260} color={colors.mango} />
