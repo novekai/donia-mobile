@@ -20,6 +20,7 @@ export type RootStackParams = {
   Signup: undefined;
   OTP: { phone?: string; email?: string } | undefined;
   ForgotPassword: undefined;
+  ResetPassword: { contact: string; channel: 'WHATSAPP' | 'EMAIL' };
 
   // Main (bottom tabs)
   Main: NavigatorScreenParams<MainTabsParams>;

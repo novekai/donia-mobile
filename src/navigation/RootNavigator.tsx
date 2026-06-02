@@ -16,6 +16,7 @@ const AUTH_ROUTES = new Set<string>([
   'Signup',
   'OTP',
   'ForgotPassword',
+  'ResetPassword',
 ]);
 
 // Auth
@@ -27,6 +28,7 @@ import { LoginScreen } from '../screens/auth/LoginScreen';
 import { SignupScreen } from '../screens/auth/SignupScreen';
 import { OTPScreen } from '../screens/auth/OTPScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 
 // Main flow (above tabs)
 import { NotificationsScreen } from '../screens/main/NotificationsScreen';
@@ -105,6 +107,7 @@ export function RootNavigator() {
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="OTP" component={OTPScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
 
         {/* Main */}
         <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
