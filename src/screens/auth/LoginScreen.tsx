@@ -1,4 +1,6 @@
 // Login — segmented Téléphone/Email + form (branché sur l'API)
+// - Mode "phone" utilise PhoneInput (dropdown indicatif pays)
+// - Champ mot de passe utilise PasswordInput (oeil show/hide)
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -6,6 +8,8 @@ import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { PhoneInput, DEFAULT_COUNTRY, toE164, type Country } from '../../components/ui/PhoneInput';
+import { PasswordInput } from '../../components/ui/PasswordInput';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { useWiggle } from '../../theme/animations';
 import { colors } from '../../theme/tokens';
@@ -15,17 +19,10 @@ import * as authApi from '../../api/auth';
 import { getApiErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
 
-function normalizePhone(raw: string): string {
-  // Accept "90 12 34 56" or "+229 90 12 34 56" — return E.164 with +229 default
-  const digits = raw.replace(/\D/g, '');
-  if (raw.startsWith('+')) return '+' + digits;
-  if (digits.startsWith('229')) return '+' + digits;
-  return '+229' + digits;
-}
-
 export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
   const [mode, setMode] = useState<'phone' | 'email'>('phone');
-  const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [localPhone, setLocalPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,10 +35,20 @@ export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
       Alert.alert('Mot de passe requis', 'Entre ton mot de passe pour te connecter.');
       return;
     }
-    const identifier = mode === 'phone' ? normalizePhone(phone) : email.trim();
-    if (!identifier) {
-      Alert.alert('Identifiant manquant', mode === 'phone' ? 'Entre ton numéro.' : 'Entre ton email.');
-      return;
+    let identifier = '';
+    if (mode === 'phone') {
+      const digits = localPhone.replace(/\D/g, '');
+      if (!digits) {
+        Alert.alert('Numéro manquant', 'Entre ton numéro de téléphone.');
+        return;
+      }
+      identifier = toE164(country, localPhone);
+    } else {
+      identifier = email.trim().toLowerCase();
+      if (!identifier) {
+        Alert.alert('Email manquant', 'Entre ton adresse email.');
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -76,14 +83,14 @@ export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
           />
         </View>
 
-        <View style={{ marginTop: 18 }}>
+        <View style={{ marginTop: 18, gap: 14 }}>
           {mode === 'phone' ? (
-            <Input
+            <PhoneInput
               label="Numéro de téléphone"
-              placeholder="+229 90 12 34 56"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
+              country={country}
+              onCountryChange={setCountry}
+              localNumber={localPhone}
+              onLocalNumberChange={setLocalPhone}
             />
           ) : (
             <Input
@@ -95,13 +102,7 @@ export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
               onChangeText={setEmail}
             />
           )}
-          <Input
-            label="Mot de passe"
-            placeholder="••••••••"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <PasswordInput label="Mot de passe" value={password} onChangeText={setPassword} />
           <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
             <Text style={styles.forgot}>Mot de passe oublié ?</Text>
           </Pressable>

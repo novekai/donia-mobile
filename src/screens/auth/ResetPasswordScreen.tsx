@@ -5,6 +5,7 @@ import Animated from 'react-native-reanimated';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { Button } from '../../components/ui/Button';
+import { PasswordInput } from '../../components/ui/PasswordInput';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
 import { usePulse } from '../../theme/animations';
 import { colors, radius } from '../../theme/tokens';
@@ -129,32 +130,18 @@ export function ResetPasswordScreen({ navigation, route }: RootStackScreenProps<
       </Pressable>
 
       <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 12 }}>
-        <View>
-          <Text style={styles.label}>Nouveau mot de passe</Text>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Au moins 8 caractères"
-            placeholderTextColor={colors.ink3}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-          />
-        </View>
-        <View>
-          <Text style={styles.label}>Confirmation</Text>
-          <TextInput
-            value={confirm}
-            onChangeText={setConfirm}
-            placeholder="Retape le mot de passe"
-            placeholderTextColor={colors.ink3}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-          />
-        </View>
+        <PasswordInput
+          label="Nouveau mot de passe"
+          placeholder="Au moins 8 caractères"
+          value={password}
+          onChangeText={setPassword}
+        />
+        <PasswordInput
+          label="Confirmation"
+          placeholder="Retape le mot de passe"
+          value={confirm}
+          onChangeText={setConfirm}
+        />
       </View>
 
       <View style={{ flex: 1 }} />

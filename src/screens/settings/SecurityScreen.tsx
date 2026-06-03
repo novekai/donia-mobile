@@ -1,6 +1,7 @@
 // Security — 5 rangs (mdp, biométrie, 2FA, devices, sessions) + zone sensible suppression compte
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -9,6 +10,9 @@ import { IconChevR } from '../../components/ui/Icons';
 import { colors, radius } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
+import { deleteAccount } from '../../api/me';
+import { getApiErrorMessage } from '../../api/client';
+import { useAuthStore } from '../../store/auth';
 
 type Row = { label: string; sub: string; emoji: string; color: string } & ({ kind: 'chev' } | { kind: 'toggle'; key: string });
 
@@ -22,6 +26,53 @@ const ROWS: Row[] = [
 
 export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>) {
   const [toggles, setToggles] = useState<Record<string, boolean>>({ bio: true, '2fa': true });
+  const [deleting, setDeleting] = useState(false);
+  const signOut = useAuthStore((s) => s.signOut);
+  const queryClient = useQueryClient();
+
+  function onDeleteAccount() {
+    if (deleting) return;
+    Alert.alert(
+      'Supprimer ton compte ?',
+      'Cette action est définitive. On supprime :\n\n• Ton nom, email, téléphone, photo\n• Tes liens anonymes et tes messages\n• Tes documents KYC\n\nOn garde, pour des raisons légales BCEAO :\n• Tes transactions financières (10 ans)\n\nTu ne pourras plus te reconnecter avec ce numéro.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Continuer',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirmation finale',
+              'Es-tu absolument sûr·e ? Cette action est irréversible.',
+              [
+                { text: 'Non, annuler', style: 'cancel' },
+                {
+                  text: 'Oui, supprimer définitivement',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setDeleting(true);
+                    try {
+                      await deleteAccount();
+                      queryClient.clear();
+                      signOut();
+                      Alert.alert(
+                        'Compte supprimé',
+                        'Ton compte a été supprimé. Tes données ont été effacées conformément au RGPD.',
+                      );
+                    } catch (e) {
+                      Alert.alert('Suppression échouée', getApiErrorMessage(e));
+                    } finally {
+                      setDeleting(false);
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  }
 
   return (
     <ScreenContainer>
@@ -62,14 +113,21 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.zoneTitle}>Supprimer mon compte</Text>
-                <Text style={styles.zoneSub}>Action définitive</Text>
+                <Text style={styles.zoneSub}>Action définitive — RGPD</Text>
               </View>
             </View>
             <Text style={styles.zoneText}>
-              Ton solde Donia sera renvoyé sur ton Mobile Money. Toutes tes données seront supprimées sous 30 jours.
+              On supprime ton nom, email, téléphone, photo, liens anonymes et documents KYC.{'\n'}
+              On conserve tes transactions financières 10 ans (obligation BCEAO).
             </Text>
-            <Pressable style={styles.zoneBtn}>
-              <Text style={styles.zoneBtnText}>Demander la suppression</Text>
+            <Pressable
+              onPress={onDeleteAccount}
+              disabled={deleting}
+              style={[styles.zoneBtn, deleting && { opacity: 0.5 }]}
+            >
+              <Text style={styles.zoneBtnText}>
+                {deleting ? 'Suppression…' : 'Demander la suppression'}
+              </Text>
             </Pressable>
           </View>
         </View>

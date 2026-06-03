@@ -15,22 +15,19 @@ import { RootStackScreenProps } from '../../navigation/types';
 import * as authApi from '../../api/auth';
 import { getApiErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
+import { PhoneInput, DEFAULT_COUNTRY, toE164, type Country } from '../../components/ui/PhoneInput';
+import { PasswordInput } from '../../components/ui/PasswordInput';
 
 type Sex = 'F' | 'H' | 'A';
-
-function normalizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  if (raw.startsWith('+')) return '+' + digits;
-  if (digits.startsWith('229')) return '+' + digits;
-  return '+229' + digits;
-}
 
 export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
   const [name, setName] = useState('');
   const [sex, setSex] = useState<Sex>('F');
-  const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [localPhone, setLocalPhone] = useState('');
   const [waSame, setWaSame] = useState(true);
-  const [wa, setWa] = useState('');
+  const [waCountry, setWaCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [waLocal, setWaLocal] = useState('');
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
@@ -42,25 +39,26 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
 
   const pwMatch = pw.length > 0 && pw === pw2;
   const signIn = useAuthStore((s) => s.signIn);
+  const phoneE164Preview = toE164(country, localPhone);
 
   async function onSubmit() {
     if (loading) return;
     if (!name.trim()) return Alert.alert('Prénom manquant');
-    if (!phone) return Alert.alert('Numéro de téléphone manquant');
+    if (!localPhone.replace(/\D/g, '')) return Alert.alert('Numéro de téléphone manquant');
     if (pw.length < 8) return Alert.alert('Mot de passe trop court', 'Min. 8 caractères.');
     if (!pwMatch) return Alert.alert('Mots de passe différents');
     if (!cgu) return Alert.alert('Tu dois accepter les CGU pour continuer');
     setLoading(true);
     try {
-      const phoneE164 = normalizePhone(phone);
+      const phoneE164 = toE164(country, localPhone);
       const res = await authApi.signup({
         name: name.trim(),
         phone: phoneE164,
-        whatsapp: waSame ? phoneE164 : normalizePhone(wa),
+        whatsapp: waSame ? phoneE164 : toE164(waCountry, waLocal),
         email: email.trim() || undefined,
         password: pw,
         sex: sex === 'F' ? 'F' : sex === 'H' ? 'M' : 'OTHER',
-        country: 'BJ',
+        country: country.code,
         dob: dobDay && dobMonth && dobYear ? `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}` : undefined,
       });
       signIn(res);
@@ -129,7 +127,13 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
         </View>
 
         <View style={{ marginTop: spacing.sm }} />
-        <Input label="Numéro de téléphone" placeholder="+229 90 12 34 56" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+        <PhoneInput
+          label="Numéro de téléphone"
+          country={country}
+          onCountryChange={setCountry}
+          localNumber={localPhone}
+          onLocalNumberChange={setLocalPhone}
+        />
 
         <View style={styles.waHeader}>
           <Text style={styles.fieldLabel}>💬 Numéro WhatsApp</Text>
@@ -142,22 +146,32 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
         </View>
         {waSame ? (
           <View style={styles.waSame}>
-            <Text style={styles.waSameText}>{phone || '+229 …'}</Text>
+            <Text style={styles.waSameText}>{phoneE164Preview || '+229 …'}</Text>
             <Text style={styles.waSameHint}>· même que téléphone</Text>
           </View>
         ) : (
-          <Input placeholder="+229 …" keyboardType="phone-pad" value={wa} onChangeText={setWa} />
+          <PhoneInput
+            country={waCountry}
+            onCountryChange={setWaCountry}
+            localNumber={waLocal}
+            onLocalNumberChange={setWaLocal}
+          />
         )}
 
+        <View style={{ marginTop: spacing.sm }} />
         <Input label="Email (optionnel)" placeholder="ton@email.com" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <Input label="Mot de passe" placeholder="••••••••" secureTextEntry value={pw} onChangeText={setPw} />
-        <Input label="Confirmer le mot de passe" placeholder="••••••••" secureTextEntry value={pw2} onChangeText={setPw2}
-          rightIcon={pwMatch ? (
+        <View style={{ marginTop: spacing.sm }} />
+        <PasswordInput label="Mot de passe" value={pw} onChangeText={setPw} />
+        <View style={{ marginTop: spacing.sm }} />
+        <PasswordInput label="Confirmer le mot de passe" value={pw2} onChangeText={setPw2} />
+        {pwMatch && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <View style={styles.checkBubble}>
               <IconCheck size={11} color={colors.bg} strokeWidth={3.5} />
             </View>
-          ) : undefined}
-        />
+            <Text style={{ fontSize: 11, color: colors.green, fontFamily: fonts.bodyBold }}>Mots de passe identiques</Text>
+          </View>
+        )}
 
         <Pressable onPress={() => setCgu((v) => !v)} style={styles.cguRow}>
           <View style={[styles.cguBox, cgu && { backgroundColor: colors.coral }]}>
