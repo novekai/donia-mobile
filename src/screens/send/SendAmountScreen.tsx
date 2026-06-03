@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { Sparkle } from '../../components/deco/Sparkle';
@@ -12,6 +13,7 @@ import { IconCheck } from '../../components/ui/Icons';
 import { colors, radius } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
+import { getMe } from '../../api/me';
 
 const PRESETS = ['1 000', '5 000', '10 000', '25 000'];
 
@@ -30,6 +32,11 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
   const { categoryKey, recipientPhone, recipientName } = route.params || {};
   const [raw, setRaw] = useState('');
   const blinkStyle = useBlink();
+
+  // Real wallet balance — used to show the user how much they'll have left after sending.
+  const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
+  const balance = Number(meQuery.data?.user?.wallet?.balancePrincipal ?? 0);
+  const afterBalance = Math.max(0, balance - Number(raw || '0'));
 
   const formatted = Number(raw || '0').toLocaleString('fr-FR').replace(/,/g, ' ');
 
@@ -60,7 +67,7 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
         </View>
         <Text style={styles.amountUnit}>FCFA</Text>
         <Text style={styles.afterBalance}>
-          Solde après envoi : <Text style={styles.afterBalanceNum}>{(125800 - Number(raw)).toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA</Text>
+          Solde après envoi : <Text style={styles.afterBalanceNum}>{afterBalance.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA</Text>
         </Text>
       </View>
 
