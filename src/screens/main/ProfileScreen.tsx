@@ -1,7 +1,7 @@
 // Profile V2 — hub utilisateur, calé sur la maquette Direction C v2
 // Banner indigo plein avec avatar à gauche, compteurs intégrés, 3 groupes d'actions.
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Image, Alert, ActivityIndicator, Linking } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -26,8 +26,7 @@ function fmtCount(n: number): string {
   return n.toString();
 }
 
-type Row = { label: string; sub: string; emoji: string; color: string; badge?: string; route?: ScreenName };
-type Group = { items: Row[] };
+// Anciens types Row/Group retirés — voir RowEx/GroupEx dans le composant (supporte routes + tabs + fn).
 
 export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
@@ -175,26 +174,46 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
     Alert.alert('Photo de profil', 'Choisis comment changer ta photo', buttons);
   }
 
-  const groups: Group[] = [
+  // Action distincte de route : permet de wire les Pressable avec un onPress custom
+  // (ex: mailto, navigation imbriquée vers tab History dans Main).
+  type RowAction = { kind: 'route'; route: ScreenName } | { kind: 'tab'; tabName: string } | { kind: 'fn'; onPress: () => void };
+  type RowEx = { label: string; sub: string; emoji: string; color: string; action: RowAction; badge?: string };
+  type GroupEx = { items: RowEx[] };
+
+  const openHelp = () => {
+    const url = 'mailto:contact@doniia.com?subject=Aide%20Donia';
+    Linking.canOpenURL(url).then((ok) => {
+      if (ok) Linking.openURL(url);
+      else Alert.alert('Contact', 'Écris-nous à contact@doniia.com');
+    });
+  };
+
+  const groups: GroupEx[] = [
     { items: [
-      { label: 'Mon solde', sub: `${balance.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA`, emoji: '💰', color: colors.mango, route: 'Wallet' },
-      { label: 'Notifications', sub: 'Cartes reçues · paiements', emoji: '🔔', color: colors.coral, route: 'Notifications' },
+      { label: 'Mon solde', sub: `${balance.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA`, emoji: '💰', color: colors.mango, action: { kind: 'route', route: 'Wallet' } },
+      { label: 'Notifications', sub: 'Cartes reçues · paiements', emoji: '🔔', color: colors.coral, action: { kind: 'route', route: 'Notifications' } },
     ]},
     { items: [
-      { label: 'Mes cartes envoyées', sub: `${sentCount} carte${sentCount > 1 ? 's' : ''}`, emoji: '📤', color: colors.indigo, route: 'History' as ScreenName },
-      { label: 'Cartes reçues', sub: `${receivedCount} carte${receivedCount > 1 ? 's' : ''}`, emoji: '📥', color: colors.pink, route: 'History' as ScreenName },
+      { label: 'Mes cartes envoyées', sub: `${sentCount} carte${sentCount > 1 ? 's' : ''}`, emoji: '📤', color: colors.indigo, action: { kind: 'tab', tabName: 'History' } },
+      { label: 'Cartes reçues', sub: `${receivedCount} carte${receivedCount > 1 ? 's' : ''}`, emoji: '📥', color: colors.pink, action: { kind: 'tab', tabName: 'History' } },
       { label: 'Parrainage',
         sub: referralCount > 0
           ? `${referralCount} filleul${referralCount > 1 ? 's' : ''} · ${referralEarned.toLocaleString('fr-FR')} FCFA gagnés`
           : '1 % à vie · invite tes amis',
-        emoji: '🎁', color: colors.mint, route: 'Referral' },
+        emoji: '🎁', color: colors.mint, action: { kind: 'route', route: 'Referral' } },
     ]},
     { items: [
-      { label: 'Sécurité', sub: 'Mot de passe · biométrie', emoji: '🔒', color: colors.plum, route: 'Security' },
-      { label: 'Paramètres', sub: 'Confidentialité · langue · anniversaire', emoji: '⚙️', color: colors.ink2, route: 'Settings' },
-      { label: 'Aide & support', sub: 'FAQ · nous contacter', emoji: '💬', color: colors.indigo },
+      { label: 'Sécurité', sub: 'Mot de passe · 2FA · sessions', emoji: '🔒', color: colors.plum, action: { kind: 'route', route: 'Security' } },
+      { label: 'Paramètres', sub: 'Confidentialité · langue · anniversaire', emoji: '⚙️', color: colors.ink2, action: { kind: 'route', route: 'Settings' } },
+      { label: 'Aide & support', sub: 'FAQ · nous contacter', emoji: '💬', color: colors.indigo, action: { kind: 'fn', onPress: openHelp } },
     ]},
   ];
+
+  function runAction(a: RowAction) {
+    if (a.kind === 'route') navigation.navigate(a.route as never);
+    else if (a.kind === 'tab') navigation.navigate('Main', { screen: a.tabName as never } as never);
+    else a.onPress();
+  }
 
   return (
     <ScreenContainer>
@@ -257,7 +276,7 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
               {g.items.map((it, i) => (
                 <Pressable
                   key={it.label}
-                  onPress={() => it.route && navigation.navigate(it.route as never)}
+                  onPress={() => runAction(it.action)}
                   style={[styles.row, i < g.items.length - 1 && styles.rowDivider]}
                 >
                   <View style={[styles.itemIcon, { backgroundColor: `${it.color}22` }]}>

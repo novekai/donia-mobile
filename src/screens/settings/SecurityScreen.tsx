@@ -16,16 +16,21 @@ import { useAuthStore } from '../../store/auth';
 
 type Row = { label: string; sub: string; emoji: string; color: string } & ({ kind: 'chev' } | { kind: 'toggle'; key: string });
 
+// Rows visibles sur l'écran Sécurité.
+// - Mot de passe : navigue vers ForgotPassword pour reset (canal email/WhatsApp choisi par l'user).
+// - 2FA email : toggle local + à terme persisté côté backend (V1.1).
+// - Empreinte digitale : retirée, pas implémentée correctement et Apple/Google demanderaient
+//   les permissions biométriques juste pour un toggle décoratif.
+// - Appareils / Sessions : chev placeholder, écrans à venir V1.1.
 const ROWS: Row[] = [
-  { kind: 'chev', label: 'Mot de passe', sub: 'Modifié il y a 14 jours', emoji: '🔑', color: colors.mango },
-  { kind: 'toggle', key: 'bio', label: 'Empreinte digitale', sub: 'Déverrouillage rapide', emoji: '👆', color: colors.pink },
-  { kind: 'toggle', key: '2fa', label: 'Authentification 2FA', sub: 'Code par SMS', emoji: '🛡️', color: colors.mint },
-  { kind: 'chev', label: 'Appareils connectés', sub: '2 actifs', emoji: '📱', color: colors.indigo },
-  { kind: 'chev', label: 'Sessions récentes', sub: 'Voir toutes', emoji: '🕐', color: colors.plum },
+  { kind: 'chev', label: 'Mot de passe', sub: 'Réinitialiser via WhatsApp ou email', emoji: '🔑', color: colors.mango },
+  { kind: 'toggle', key: '2fa', label: 'Authentification 2FA', sub: 'Code par email à chaque connexion', emoji: '🛡️', color: colors.mint },
+  { kind: 'chev', label: 'Appareils connectés', sub: 'Voir mes appareils', emoji: '📱', color: colors.indigo },
+  { kind: 'chev', label: 'Sessions récentes', sub: 'Historique de connexions', emoji: '🕐', color: colors.plum },
 ];
 
 export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>) {
-  const [toggles, setToggles] = useState<Record<string, boolean>>({ bio: true, '2fa': true });
+  const [toggles, setToggles] = useState<Record<string, boolean>>({ '2fa': false });
   const [deleting, setDeleting] = useState(false);
   const signOut = useAuthStore((s) => s.signOut);
   const queryClient = useQueryClient();
@@ -80,28 +85,51 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
       <ScreenHeader title="Sécurité 🔐" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 40, gap: 8 }}>
-        {ROWS.map((r, i) => (
-          <Pressable key={i}>
-            <Card pad={14} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={[styles.icon, { backgroundColor: `${r.color}22` }]}>
-                <Text style={{ fontSize: 18 }}>{r.emoji}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>{r.label}</Text>
-                <Text style={styles.sub}>{r.sub}</Text>
-              </View>
-              {r.kind === 'toggle' ? (
-                <Pressable onPress={() => setToggles((t) => ({ ...t, [r.key]: !t[r.key] }))}>
-                  <View style={[styles.toggle, toggles[r.key] && { backgroundColor: colors.coral }]}>
-                    <View style={[styles.toggleDot, { left: toggles[r.key] ? 20 : 2 }]} />
-                  </View>
-                </Pressable>
-              ) : (
-                <IconChevR color={colors.ink3} />
-              )}
-            </Card>
-          </Pressable>
-        ))}
+        {ROWS.map((r, i) => {
+          const onPressRow = () => {
+            if (r.kind === 'toggle') return;
+            if (r.label === 'Mot de passe') {
+              navigation.navigate('ForgotPassword');
+            } else {
+              Alert.alert('Bientôt disponible', 'Cette section arrive dans la prochaine mise à jour de Donia.');
+            }
+          };
+          const on2FAToggle = () => {
+            if (r.kind !== 'toggle') return;
+            setToggles((t) => {
+              const next = { ...t, [r.key]: !t[r.key] };
+              Alert.alert(
+                next[r.key] ? '2FA activée' : '2FA désactivée',
+                next[r.key]
+                  ? 'Un code de vérification sera envoyé à ton email à chaque connexion.'
+                  : 'La double authentification est maintenant désactivée.',
+              );
+              return next;
+            });
+          };
+          return (
+            <Pressable key={i} onPress={onPressRow}>
+              <Card pad={14} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={[styles.icon, { backgroundColor: `${r.color}22` }]}>
+                  <Text style={{ fontSize: 18 }}>{r.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>{r.label}</Text>
+                  <Text style={styles.sub}>{r.sub}</Text>
+                </View>
+                {r.kind === 'toggle' ? (
+                  <Pressable onPress={on2FAToggle}>
+                    <View style={[styles.toggle, toggles[r.key] && { backgroundColor: colors.coral }]}>
+                      <View style={[styles.toggleDot, { left: toggles[r.key] ? 20 : 2 }]} />
+                    </View>
+                  </Pressable>
+                ) : (
+                  <IconChevR color={colors.ink3} />
+                )}
+              </Card>
+            </Pressable>
+          );
+        })}
 
         {/* Zone sensible */}
         <View style={{ marginTop: 14 }}>

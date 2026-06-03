@@ -1,7 +1,7 @@
 // Settings — menu Paramètres (Phase 1 : navigation OK pour les écrans existants,
 // Alert "bientôt" sur les options Phase 3 non-encore-implémentées).
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Linking } from 'react-native';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -17,6 +17,7 @@ type Item = {
   sub: string;
   color: string;
   route?: keyof RootStackParams;
+  url?: string;
   badge?: string;
   comingSoon?: boolean;
 };
@@ -28,7 +29,7 @@ const SECTIONS: Section[] = [
     items: [
       { emoji: '👤', label: 'Mes informations', sub: 'Nom, email, téléphone, date de naissance', color: colors.coral, route: 'MyInfo' },
       { emoji: '🪪', label: "Vérification d'identité", sub: 'KYC pour les retraits', color: colors.mango, route: 'KYC' },
-      { emoji: '🔒', label: 'Sécurité', sub: 'Mot de passe, biométrie, sessions', color: colors.indigo, route: 'Security' },
+      { emoji: '🔒', label: 'Sécurité', sub: 'Mot de passe, 2FA, sessions', color: colors.indigo, route: 'Security' },
     ],
   },
   {
@@ -36,7 +37,7 @@ const SECTIONS: Section[] = [
     items: [
       { emoji: '🎂', label: 'Anniversaire', sub: 'Opt-in / opt-out du jour J', color: colors.pink, badge: 'Bientôt', comingSoon: true },
       { emoji: '🕶️', label: 'Confidentialité', sub: 'Qui peut voir mon email / numéro', color: colors.indigo, comingSoon: true },
-      { emoji: '🔔', label: 'Notifications', sub: 'Push, email, par catégorie', color: colors.mango, comingSoon: true },
+      { emoji: '🔔', label: 'Notifications', sub: 'Push, email, par catégorie', color: colors.mango, route: 'Notifications' },
       { emoji: '🌍', label: 'Langue & région', sub: 'Français · FCFA', color: colors.mint, comingSoon: true },
       { emoji: '🎁', label: 'Parrainage', sub: 'Invite tes amis · 1 % à vie', color: colors.plum, route: 'Referral' },
     ],
@@ -44,9 +45,10 @@ const SECTIONS: Section[] = [
   {
     title: 'Aide & légal',
     items: [
-      { emoji: '💬', label: 'Centre d\'aide', sub: 'FAQ et contact support', color: colors.mint, comingSoon: true },
-      { emoji: '📄', label: 'CGU & confidentialité', sub: 'Documents légaux', color: colors.ink2, comingSoon: true },
-      { emoji: 'ℹ️', label: 'À propos de Donia', sub: 'Version, équipe, mission', color: colors.indigo, comingSoon: true },
+      { emoji: '💬', label: 'Centre d\'aide', sub: 'Nous contacter', color: colors.mint, url: 'mailto:contact@doniia.com?subject=Aide%20Donia' },
+      { emoji: '📄', label: 'CGU', sub: 'Conditions générales d\'utilisation', color: colors.ink2, url: 'https://doniia.com/cgu' },
+      { emoji: '🔐', label: 'Confidentialité', sub: 'Politique de confidentialité', color: colors.ink2, url: 'https://doniia.com/confidentialite' },
+      { emoji: 'ℹ️', label: 'À propos de Donia', sub: 'NOVEKAI LTD · doniia.com', color: colors.indigo, url: 'https://doniia.com' },
     ],
   },
 ];
@@ -55,6 +57,13 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
   function onPressItem(it: Item) {
     if (it.route) {
       navigation.navigate(it.route as never);
+      return;
+    }
+    if (it.url) {
+      Linking.canOpenURL(it.url).then((ok) => {
+        if (ok) Linking.openURL(it.url!);
+        else Alert.alert('Impossible d\'ouvrir', it.url!);
+      });
       return;
     }
     if (it.comingSoon) {
