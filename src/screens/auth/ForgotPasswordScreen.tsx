@@ -1,6 +1,6 @@
 // ForgotPassword — saisie contact + choix canal (WhatsApp/Email) — branché API
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, Alert, Modal, FlatList } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
@@ -18,42 +18,74 @@ import { getApiErrorMessage } from '../../api/client';
 type Channel = 'WHATSAPP' | 'EMAIL';
 
 const METHODS: { id: Channel; title: string; emoji: string; accent: string; placeholder: string; help: string }[] = [
-  { id: 'WHATSAPP', title: 'Par WhatsApp', emoji: '📲', accent: '#25D366', placeholder: '+229 …', help: 'On t’enverra un code WhatsApp.' },
+  { id: 'WHATSAPP', title: 'Par WhatsApp', emoji: '📲', accent: '#25D366', placeholder: '90 12 34 56', help: 'On t’enverra un code WhatsApp.' },
   { id: 'EMAIL', title: 'Par email', emoji: '✉️', accent: colors.indigo, placeholder: 'ton@email.com', help: 'On t’enverra un code par email.' },
+];
+
+// Pays supportés : 8 d'Afrique de l'Ouest/Centrale + diaspora. L'ordre met les 8 du marché Donia en premier.
+type Country = { code: string; flag: string; name: string; dial: string };
+const COUNTRIES: Country[] = [
+  { code: 'BJ', flag: '🇧🇯', name: 'Bénin', dial: '+229' },
+  { code: 'CI', flag: '🇨🇮', name: "Côte d'Ivoire", dial: '+225' },
+  { code: 'SN', flag: '🇸🇳', name: 'Sénégal', dial: '+221' },
+  { code: 'TG', flag: '🇹🇬', name: 'Togo', dial: '+228' },
+  { code: 'BF', flag: '🇧🇫', name: 'Burkina Faso', dial: '+226' },
+  { code: 'ML', flag: '🇲🇱', name: 'Mali', dial: '+223' },
+  { code: 'NE', flag: '🇳🇪', name: 'Niger', dial: '+227' },
+  { code: 'CM', flag: '🇨🇲', name: 'Cameroun', dial: '+237' },
+  { code: 'FR', flag: '🇫🇷', name: 'France', dial: '+33' },
+  { code: 'BE', flag: '🇧🇪', name: 'Belgique', dial: '+32' },
+  { code: 'CA', flag: '🇨🇦', name: 'Canada', dial: '+1' },
+  { code: 'US', flag: '🇺🇸', name: 'États-Unis', dial: '+1' },
+  { code: 'GB', flag: '🇬🇧', name: 'Royaume-Uni', dial: '+44' },
+  { code: 'DE', flag: '🇩🇪', name: 'Allemagne', dial: '+49' },
+  { code: 'CH', flag: '🇨🇭', name: 'Suisse', dial: '+41' },
+  { code: 'ES', flag: '🇪🇸', name: 'Espagne', dial: '+34' },
+  { code: 'IT', flag: '🇮🇹', name: 'Italie', dial: '+39' },
+  { code: 'PT', flag: '🇵🇹', name: 'Portugal', dial: '+351' },
 ];
 
 export function ForgotPasswordScreen({ navigation }: RootStackScreenProps<'ForgotPassword'>) {
   const [selected, setSelected] = useState<Channel>('WHATSAPP');
-  const [contact, setContact] = useState('');
+  const [country, setCountry] = useState<Country>(COUNTRIES[0]!);
+  const [localPhone, setLocalPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const bobStyle = useBob();
 
   const method = METHODS.find((m) => m.id === selected)!;
 
   async function onSend() {
-    const trimmed = contact.trim();
-    if (!trimmed) {
-      Alert.alert('Champ vide', selected === 'WHATSAPP'
-        ? 'Entre ton numéro WhatsApp.'
-        : 'Entre ton adresse email.');
-      return;
+    let normalized = '';
+
+    if (selected === 'EMAIL') {
+      const trimmed = email.trim().toLowerCase();
+      if (!trimmed) {
+        Alert.alert('Champ vide', 'Entre l’adresse email de ton compte.');
+        return;
+      }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
+        Alert.alert('Email invalide', 'Vérifie le format de ton adresse email.');
+        return;
+      }
+      normalized = trimmed;
+    } else {
+      const digits = localPhone.replace(/\D/g, '');
+      if (!digits) {
+        Alert.alert('Champ vide', 'Entre le numéro WhatsApp de ton compte.');
+        return;
+      }
+      if (digits.length < 6 || digits.length > 12) {
+        Alert.alert('Numéro invalide', 'Tape ton numéro local sans l’indicatif (ex: 90 12 34 56).');
+        return;
+      }
+      normalized = `${country.dial}${digits}`;
     }
-    if (selected === 'EMAIL' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) {
-      Alert.alert('Email invalide', 'Vérifie le format de ton adresse email.');
-      return;
-    }
-    if (selected === 'WHATSAPP' && !/^\+?\d{8,15}$/.test(trimmed.replace(/\s/g, ''))) {
-      Alert.alert('Numéro invalide', 'Le numéro doit être au format international (ex: +22990123456).');
-      return;
-    }
+
     setSending(true);
     try {
-      const normalized = selected === 'EMAIL'
-        ? trimmed.toLowerCase()
-        : trimmed.replace(/\s/g, '');
       await forgotPassword(normalized, selected);
-      // For security, the backend always returns ok=true even if the contact doesn't exist
-      // (to prevent account enumeration). We tell the user the code was sent regardless.
       navigation.navigate('ResetPassword', { contact: normalized, channel: selected });
     } catch (e) {
       Alert.alert('Envoi échoué', getApiErrorMessage(e));
@@ -109,16 +141,43 @@ export function ForgotPasswordScreen({ navigation }: RootStackScreenProps<'Forgo
         <Text style={styles.label}>
           {selected === 'WHATSAPP' ? 'Ton numéro WhatsApp' : 'Ton adresse email'}
         </Text>
-        <TextInput
-          value={contact}
-          onChangeText={setContact}
-          placeholder={method.placeholder}
-          placeholderTextColor={colors.ink3}
-          keyboardType={selected === 'EMAIL' ? 'email-address' : 'phone-pad'}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={styles.input}
-        />
+
+        {selected === 'WHATSAPP' ? (
+          <View style={styles.phoneRow}>
+            <Pressable style={styles.dialBtn} onPress={() => setPickerOpen(true)}>
+              <Text style={styles.dialFlag}>{country.flag}</Text>
+              <Text style={styles.dialCode}>{country.dial}</Text>
+              <Text style={styles.dialChevron}>▾</Text>
+            </Pressable>
+            <TextInput
+              value={localPhone}
+              onChangeText={setLocalPhone}
+              placeholder={method.placeholder}
+              placeholderTextColor={colors.ink3}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={[styles.input, styles.phoneInput]}
+            />
+          </View>
+        ) : (
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder={method.placeholder}
+            placeholderTextColor={colors.ink3}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            style={styles.input}
+          />
+        )}
+
+        <Text style={styles.hint}>
+          💡 Utilise exactement{' '}
+          {selected === 'WHATSAPP' ? 'le numéro WhatsApp' : "l'adresse email"}{' '}
+          de ton compte (celui utilisé lors de l'inscription).
+        </Text>
       </View>
 
       <View style={{ flex: 1 }} />
@@ -136,6 +195,36 @@ export function ForgotPasswordScreen({ navigation }: RootStackScreenProps<'Forgo
           </Text>
         </Pressable>
       </View>
+
+      {/* Country picker modal */}
+      <Modal visible={pickerOpen} animationType="slide" transparent onRequestClose={() => setPickerOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setPickerOpen(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Choisis ton indicatif</Text>
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={(c) => c.code}
+              renderItem={({ item }) => {
+                const isCurrent = item.code === country.code;
+                return (
+                  <Pressable
+                    onPress={() => {
+                      setCountry(item);
+                      setPickerOpen(false);
+                    }}
+                    style={[styles.countryRow, isCurrent && { backgroundColor: 'rgba(244,72,111,0.08)' }]}
+                  >
+                    <Text style={styles.countryFlag}>{item.flag}</Text>
+                    <Text style={styles.countryName}>{item.name}</Text>
+                    <Text style={styles.countryDial}>{item.dial}</Text>
+                  </Pressable>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -165,5 +254,66 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.ink,
   },
+  phoneRow: { flexDirection: 'row', gap: 8 },
+  dialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 52,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+  },
+  dialFlag: { fontSize: 20 },
+  dialCode: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink },
+  dialChevron: { fontSize: 10, color: colors.ink2, marginLeft: 2 },
+  phoneInput: { flex: 1 },
+  hint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: colors.ink2,
+    lineHeight: 17,
+    fontFamily: fonts.bodyRegular,
+  },
   back: { textAlign: 'center', fontSize: 13, color: colors.ink2 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(42,15,26,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 8,
+    paddingBottom: 24,
+    maxHeight: '75%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.ink3,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 18,
+    color: colors.ink,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  countryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+  },
+  countryFlag: { fontSize: 22 },
+  countryName: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.ink },
+  countryDial: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink2 },
 });
