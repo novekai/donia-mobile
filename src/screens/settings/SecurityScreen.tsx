@@ -90,8 +90,10 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
             if (r.kind === 'toggle') return;
             if (r.label === 'Mot de passe') {
               navigation.navigate('ForgotPassword');
-            } else {
-              Alert.alert('Bientôt disponible', 'Cette section arrive dans la prochaine mise à jour de Donia.');
+            } else if (r.label === 'Appareils connectés') {
+              navigation.navigate('Sessions', { variant: 'devices' });
+            } else if (r.label === 'Sessions récentes') {
+              navigation.navigate('Sessions', { variant: 'sessions' });
             }
           };
           const on2FAToggle = () => {

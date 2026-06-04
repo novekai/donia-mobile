@@ -1,12 +1,19 @@
 // Me (profile) endpoints
-import { api, apiGet, apiPatch, apiDelete } from './client';
+import { api, apiGet, apiPatch, apiPost, apiDelete } from './client';
 import type { User } from './types';
 
 export function getMe(): Promise<{ user: User }> {
   return apiGet<{ user: User }>('/v1/me');
 }
 
-export function updateMe(patch: Partial<Pick<User, 'name' | 'whatsapp' | 'email' | 'sex' | 'dob' | 'city' | 'country' | 'birthdayOptIn'>>): Promise<{ user: User }> {
+// Champs éditables via PATCH /v1/me. Doit rester en phase avec patchSchema (backend/src/routes/me.ts).
+type EditableProfileFields =
+  | 'name' | 'whatsapp' | 'email' | 'sex' | 'dob' | 'city' | 'country'
+  | 'birthdayOptIn'
+  | 'showEmailPublic' | 'showPhonePublic' | 'showAvatarPublic'
+  | 'preferredLanguage';
+
+export function updateMe(patch: Partial<Pick<User, EditableProfileFields>>): Promise<{ user: User }> {
   return apiPatch<{ user: User }>('/v1/me', patch);
 }
 
@@ -41,4 +48,26 @@ export async function deleteAccount(): Promise<{ ok: true }> {
     data: { confirmation: 'SUPPRIMER' },
   });
   return data;
+}
+
+// Sessions actives — utilisées par les écrans Sécurité > Sessions / Appareils
+export type ActiveSession = {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  expiresAt: string;
+  isCurrent: boolean;
+};
+
+export function listSessions(): Promise<{ sessions: ActiveSession[] }> {
+  return apiGet<{ sessions: ActiveSession[] }>('/v1/me/sessions');
+}
+
+export function revokeSession(id: string): Promise<{ ok: true }> {
+  return apiPost<{ ok: true }>(`/v1/me/sessions/${id}/revoke`);
+}
+
+export function revokeAllOtherSessions(): Promise<{ ok: true; revoked: number }> {
+  return apiPost<{ ok: true; revoked: number }>('/v1/me/sessions/revoke-all');
 }

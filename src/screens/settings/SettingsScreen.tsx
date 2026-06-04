@@ -35,10 +35,10 @@ const SECTIONS: Section[] = [
   {
     title: 'Préférences',
     items: [
-      { emoji: '🎂', label: 'Anniversaire', sub: 'Opt-in / opt-out du jour J', color: colors.pink, badge: 'Bientôt', comingSoon: true },
-      { emoji: '🕶️', label: 'Confidentialité', sub: 'Qui peut voir mon email / numéro', color: colors.indigo, comingSoon: true },
+      { emoji: '🎂', label: 'Anniversaire', sub: 'Opt-in / opt-out du jour J', color: colors.pink, route: 'Birthday' },
+      { emoji: '🕶️', label: 'Confidentialité', sub: 'Qui peut voir mon email / numéro', color: colors.indigo, route: 'Privacy' },
       { emoji: '🔔', label: 'Notifications', sub: 'Push, email, par catégorie', color: colors.mango, route: 'Notifications' },
-      { emoji: '🌍', label: 'Langue & région', sub: 'Français · FCFA', color: colors.mint, comingSoon: true },
+      { emoji: '🌍', label: 'Langue & région', sub: 'Français · FCFA', color: colors.mint, route: 'Language' },
       { emoji: '🎁', label: 'Parrainage', sub: 'Invite tes amis · 1 % à vie', color: colors.plum, route: 'Referral' },
     ],
   },

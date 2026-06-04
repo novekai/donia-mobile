@@ -29,6 +29,10 @@ export type User = {
   referredBy?: string | null;
   avatarUrl?: string | null;
   birthdayOptIn?: boolean;
+  showEmailPublic?: boolean;
+  showPhonePublic?: boolean;
+  showAvatarPublic?: boolean;
+  preferredLanguage?: 'fr-FR' | 'en-US';
   createdAt: string;
   wallet?: Wallet;
 };

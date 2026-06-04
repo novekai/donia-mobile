@@ -59,6 +59,12 @@ export type RootStackParams = {
   Security: undefined;
   KYC: undefined;
 
+  // Sécurité & paramètres avancés (V1.0 — "Bientôt" devenu réel)
+  Sessions: { variant?: 'sessions' | 'devices' } | undefined;
+  Privacy: undefined;
+  Birthday: undefined;
+  Language: undefined;
+
   // Dev only
   Gallery: undefined;
 };
