@@ -66,6 +66,7 @@ import { BirthdayScreen } from '../screens/settings/BirthdayScreen';
 import { LanguageScreen } from '../screens/settings/LanguageScreen';
 import { ChangePasswordScreen } from '../screens/settings/ChangePasswordScreen';
 import { KYCUploadScreen } from '../screens/settings/KYCUploadScreen';
+import { NotificationsPrefScreen } from '../screens/settings/NotificationsPrefScreen';
 
 // Profile + Wallet (V2 : déplacés hors du bottom)
 import { ProfileScreen } from '../screens/main/ProfileScreen';
@@ -74,6 +75,7 @@ import { WalletScreen } from '../screens/main/WalletScreen';
 // Anonymes flow
 import { AnonymesCreateScreen } from '../screens/anonymes/AnonymesCreateScreen';
 import { AnonymesLinkScreen } from '../screens/anonymes/AnonymesLinkScreen';
+import { AnonymesLinkMessagesScreen } from '../screens/anonymes/AnonymesLinkMessagesScreen';
 import { AnonymesReadScreen } from '../screens/anonymes/AnonymesReadScreen';
 import { AnonymesReportScreen } from '../screens/anonymes/AnonymesReportScreen';
 
@@ -146,12 +148,14 @@ export function RootNavigator() {
         <Stack.Screen name="Language" component={LanguageScreen} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
         <Stack.Screen name="KYCUpload" component={KYCUploadScreen} />
+        <Stack.Screen name="NotificationsPref" component={NotificationsPrefScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Wallet" component={WalletScreen} />
 
         {/* Anonymes flow (above bottom tabs) */}
         <Stack.Screen name="AnonymesCreate" component={AnonymesCreateScreen} />
         <Stack.Screen name="AnonymesLink" component={AnonymesLinkScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen name="AnonymesLinkMessages" component={AnonymesLinkMessagesScreen} />
         <Stack.Screen name="AnonymesRead" component={AnonymesReadScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="AnonymesReport" component={AnonymesReportScreen} />
       </Stack.Navigator>

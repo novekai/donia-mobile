@@ -1,4 +1,5 @@
-// Privacy — qui peut voir mon email, téléphone, avatar (toggles persistés via PATCH /v1/me).
+// Notifications — préférences : push système, email, WhatsApp.
+// L'écran distinct de NotificationsScreen qui affiche la LISTE des notifs reçues.
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,36 +7,37 @@ import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
 import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { colors, radius } from '../../theme/tokens';
+import { colors } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { getMe, updateMe } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 
+type ToggleKey = 'notifPushEnabled' | 'notifEmailEnabled' | 'notifWhatsAppEnabled';
+
 type Toggle = {
-  key: 'showEmailPublic' | 'showPhonePublic' | 'showAvatarPublic';
+  key: ToggleKey;
   emoji: string;
   label: string;
   sub: string;
+  color: string;
 };
 
 const TOGGLES: Toggle[] = [
-  { key: 'showAvatarPublic', emoji: '🖼️', label: 'Photo de profil visible', sub: 'Les destinataires voient ton avatar sur les cartes que tu leur envoies' },
-  { key: 'showPhonePublic', emoji: '📞', label: 'Numéro visible aux contacts', sub: 'Tes filleuls et destinataires peuvent voir ton numéro de téléphone' },
-  { key: 'showEmailPublic', emoji: '✉️', label: 'Email visible aux contacts', sub: 'Ton email apparaît sur ta fiche de contact (rare)' },
+  { key: 'notifPushEnabled', emoji: '🔔', label: 'Notifications push', sub: 'Sur ton téléphone (cartes reçues, paiements, parrainage)', color: colors.coral },
+  { key: 'notifEmailEnabled', emoji: '✉️', label: 'Emails', sub: 'Récapitulatifs, sécurité, confirmation de transactions', color: colors.indigo },
+  { key: 'notifWhatsAppEnabled', emoji: '💬', label: 'WhatsApp', sub: 'Cartes reçues, codes de retrait, anniversaires de proches', color: '#25D366' },
 ];
 
-export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Privacy'>) {
-  const fromSendFlow = Boolean(route.params?.fromSendFlow);
+export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'NotificationsPref'>) {
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const [busy, setBusy] = React.useState<string | null>(null);
 
-  async function toggle(key: Toggle['key']) {
+  async function toggle(key: ToggleKey) {
     if (busy || !meQuery.data) return;
     setBusy(key);
-    const current = Boolean(meQuery.data.user[key]);
+    const current = Boolean((meQuery.data.user as Record<string, unknown>)[key] ?? true);
     try {
       await updateMe({ [key]: !current } as Record<string, boolean>);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -49,16 +51,11 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader
-        title={fromSendFlow ? 'Avant d\'envoyer 🔐' : 'Confidentialité 🔐'}
-        onBack={() => navigation.goBack()}
-      />
+      <ScreenHeader title="Notifications 🔔" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: fromSendFlow ? 120 : 40 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 }}>
         <Text style={styles.intro}>
-          {fromSendFlow
-            ? 'Choisis ce que ton destinataire peut voir de toi sur la carte. Tu peux modifier ces choix à tout moment dans Paramètres → Confidentialité.'
-            : 'Choisis qui peut voir tes informations personnelles. Tes données sont toujours sécurisées et chiffrées.'}
+          Choisis comment Donia te contacte. Les notifications de sécurité critique restent toujours envoyées.
         </Text>
 
         {meQuery.isLoading && (
@@ -70,7 +67,7 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
         {meQuery.data && (
           <Card pad={0}>
             {TOGGLES.map((t, i) => {
-              const on = Boolean(meQuery.data!.user[t.key]);
+              const on = Boolean((meQuery.data!.user as Record<string, unknown>)[t.key] ?? true);
               const isBusy = busy === t.key;
               return (
                 <Pressable
@@ -79,7 +76,9 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
                   disabled={isBusy}
                   style={[styles.row, i < TOGGLES.length - 1 && styles.rowDivider]}
                 >
-                  <View style={styles.iconBox}><Text style={{ fontSize: 20 }}>{t.emoji}</Text></View>
+                  <View style={[styles.iconBox, { backgroundColor: `${t.color}22` }]}>
+                    <Text style={{ fontSize: 22 }}>{t.emoji}</Text>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.label}>{t.label}</Text>
                     <Text style={styles.sub}>{t.sub}</Text>
@@ -92,29 +91,23 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
             })}
           </Card>
         )}
-      </ScrollView>
 
-      {fromSendFlow && (
-        <View style={styles.footer}>
-          <Button
-            label="Continuer vers le paiement"
-            pulse
-            onPress={() => navigation.goBack()}
-          />
-        </View>
-      )}
+        <Text style={styles.footnote}>
+          💡 Pour ne plus rien recevoir, désactive les trois canaux. Tu peux les réactiver à tout moment.
+        </Text>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   intro: { fontSize: 13, color: colors.ink2, marginBottom: 18, lineHeight: 19, fontFamily: fonts.bodyRegular },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 16 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.lineSoft },
-  iconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.bg2, alignItems: 'center', justifyContent: 'center' },
+  iconBox: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   label: { fontFamily: fonts.displaySemiBold, fontSize: 14, color: colors.ink },
   sub: { fontSize: 12, color: colors.ink3, marginTop: 3, lineHeight: 16 },
   toggle: { width: 46, height: 26, borderRadius: 99, backgroundColor: colors.ink3, justifyContent: 'center' },
   toggleDot: { position: 'absolute', top: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bg },
-  footer: { position: 'absolute', bottom: 28, left: 22, right: 22 },
+  footnote: { marginTop: 18, fontSize: 11, color: colors.ink3, fontStyle: 'italic', textAlign: 'center', lineHeight: 16 },
 });

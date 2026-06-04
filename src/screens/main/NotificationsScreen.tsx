@@ -1,41 +1,99 @@
-// Notifications — tabs + groupes par jour + pastille rouge unread + pulse
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+// Notifications — vraies notifs depuis l'API (plus de mock).
+// Tabs : Toutes / Non lues (Mentions retiré le 06/2026, pas de fonctionnalité dédiée).
+// Groupes par jour : Aujourd'hui / Hier / Cette semaine / Plus ancien.
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
 import { Card } from '../../components/ui/Card';
 import { usePulse } from '../../theme/animations';
-import { colors, radius } from '../../theme/tokens';
+import { colors } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
+import { listNotifications, markRead } from '../../api/notifications';
+import type { Notification } from '../../api/types';
 
-const TABS = [
-  { l: 'Toutes', count: 7 },
-  { l: 'Non lues', count: 2 },
-  { l: 'Mentions', count: 0 },
-];
+function relativeTime(iso: string): string {
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return "à l'instant";
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  if (diff < 172800) return 'hier';
+  if (diff < 604800) return `il y a ${Math.floor(diff / 86400)} j`;
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
 
-const GROUPS = [
-  { day: "Aujourd'hui", items: [
-    { who: 'Marie Dossou', text: "t'a envoyé un cadeau de 5 000 FCFA", time: 'il y a 12 min', emoji: '🎁', color: colors.pink, unread: true },
-    { who: 'Kofi Mensah', text: 'a réagi à ton cadeau avec ❤️', time: '14:32', emoji: '💬', color: colors.coral, unread: true },
-    { who: 'Donia', text: 'Ton solde a été rechargé de 25 000 FCFA via Wave', time: '09:21', emoji: '💰', color: colors.mint, unread: false },
-  ]},
-  { day: 'Hier', items: [
-    { who: 'Donia', text: 'Sam a rejoint Donia grâce à toi · +500 FCFA gagnés', time: '18:14', emoji: '✨', color: colors.mango, unread: false },
-    { who: 'Aïcha Traoré', text: 'a converti ta carte GoShop de 15 200 FCFA', time: '11:02', emoji: '🛍️', color: colors.mango, unread: false },
-    { who: 'Donia', text: "Ta vérification d'identité (KYC) a été validée !", time: '08:45', emoji: '✅', color: colors.mint, unread: false },
-  ]},
-  { day: 'Cette semaine', items: [
-    { who: 'Donia', text: 'Nouvelle carte disponible : Tabaski 2026 🌙', time: '24 mai', emoji: '🌙', color: colors.indigo, unread: false },
-  ]},
-];
+function dayBucket(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterday = today - 86400_000;
+  const weekAgo = today - 7 * 86400_000;
+  const t = d.getTime();
+  if (t >= today) return "Aujourd'hui";
+  if (t >= yesterday) return 'Hier';
+  if (t >= weekAgo) return 'Cette semaine';
+  return 'Plus ancien';
+}
+
+// Couleur + emoji par type — par défaut quand le backend ne fournit pas d'emoji.
+function styleFor(n: Notification): { color: string; emoji: string } {
+  if (n.emoji) {
+    // Couleur dérivée du type ; fallback indigo.
+    const c =
+      n.type === 'card_received' ? colors.pink :
+      n.type === 'card_redeemed' ? colors.mint :
+      n.type === 'new_filleul' ? colors.mango :
+      n.type === 'topup_received' ? colors.mint :
+      n.type === 'kyc_approved' ? colors.mint :
+      n.type === 'anonymous_message' ? colors.coral :
+      colors.indigo;
+    return { color: c, emoji: n.emoji };
+  }
+  return { color: colors.indigo, emoji: '🔔' };
+}
 
 export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifications'>) {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState<'all' | 'unread'>('all');
   const pulseStyle = usePulse();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['notifications', tab],
+    queryFn: () => listNotifications({ unreadOnly: tab === 'unread', limit: 50 }),
+    refetchInterval: 60_000,
+  });
+
+  const all = query.data?.items ?? [];
+  const unreadCount = query.data?.unread ?? 0;
+
+  async function onMarkAllRead() {
+    if (all.length === 0) return;
+    try {
+      await markRead();
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch {}
+  }
+
+  // Groupe par bucket, en préservant l'ordre desc.
+  const groups = useMemo(() => {
+    const buckets = new Map<string, Notification[]>();
+    for (const n of all) {
+      const b = dayBucket(n.createdAt);
+      if (!buckets.has(b)) buckets.set(b, []);
+      buckets.get(b)!.push(n);
+    }
+    return Array.from(buckets, ([day, items]) => ({ day, items }));
+  }, [all]);
+
+  const TABS = [
+    { key: 'all' as const, l: 'Toutes', count: all.length },
+    { key: 'unread' as const, l: 'Non lues', count: unreadCount },
+  ];
 
   return (
     <ScreenContainer>
@@ -44,18 +102,20 @@ export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifi
         title="Notifications"
         onBack={() => navigation.goBack()}
         rightAction={
-          <Pressable>
-            <Text style={styles.markRead}>Tout marquer lu</Text>
-          </Pressable>
+          unreadCount > 0 ? (
+            <Pressable onPress={onMarkAllRead}>
+              <Text style={styles.markRead}>Tout marquer lu</Text>
+            </Pressable>
+          ) : undefined
         }
       />
 
       {/* Tabs */}
       <View style={styles.tabs}>
-        {TABS.map((t, i) => {
-          const on = tab === i;
+        {TABS.map((t) => {
+          const on = tab === t.key;
           return (
-            <Pressable key={t.l} onPress={() => setTab(i)} style={[styles.tab, on && { backgroundColor: colors.coral }]}>
+            <Pressable key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, on && { backgroundColor: colors.coral }]}>
               <Text style={[styles.tabLabel, on && { color: colors.bg }]}>{t.l}</Text>
               {t.count > 0 && (
                 <View style={[styles.tabCount, { backgroundColor: on ? 'rgba(253,247,246,0.25)' : 'rgba(244,72,111,0.15)' }]}>
@@ -67,25 +127,57 @@ export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifi
         })}
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 22 }}>
-        {GROUPS.map((g, gi) => (
-          <View key={gi} style={{ marginBottom: 18 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 22 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={query.isRefetching}
+            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['notifications'] })}
+            tintColor={colors.coral}
+          />
+        }
+      >
+        {query.isLoading && (
+          <Text style={styles.empty}>Chargement…</Text>
+        )}
+
+        {!query.isLoading && groups.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>🔕</Text>
+            <Text style={styles.emptyTitle}>
+              {tab === 'unread' ? 'Aucune notif non lue' : 'Aucune notification'}
+            </Text>
+            <Text style={styles.emptySub}>
+              {tab === 'unread'
+                ? 'Tu es à jour 🎉'
+                : 'Tes notifications apparaîtront ici dès qu\'il y aura de l\'activité.'}
+            </Text>
+          </View>
+        )}
+
+        {groups.map((g) => (
+          <View key={g.day} style={{ marginBottom: 18 }}>
             <Text style={styles.dayLabel}>{g.day}</Text>
             <Card pad={0}>
-              {g.items.map((n, i) => (
-                <View key={i} style={[styles.row, i < g.items.length - 1 && styles.rowDivider]}>
-                  {n.unread && <Animated.View style={[pulseStyle, styles.unreadDot]} />}
-                  <View style={[styles.icon, { backgroundColor: `${n.color}22` }]}>
-                    <Text style={{ fontSize: 18 }}>{n.emoji}</Text>
+              {g.items.map((n, i) => {
+                const { color, emoji } = styleFor(n);
+                const unread = !n.readAt;
+                return (
+                  <View key={n.id} style={[styles.row, i < g.items.length - 1 && styles.rowDivider]}>
+                    {unread && <Animated.View style={[pulseStyle, styles.unreadDot]} />}
+                    <View style={[styles.icon, { backgroundColor: `${color}22` }]}>
+                      <Text style={{ fontSize: 18 }}>{emoji}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.text}>
+                        <Text style={styles.who}>{n.title}</Text>
+                        {n.body ? ` ${n.body}` : ''}
+                      </Text>
+                      <Text style={styles.time}>{relativeTime(n.createdAt)}</Text>
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.text}>
-                      <Text style={styles.who}>{n.who}</Text> {n.text}
-                    </Text>
-                    <Text style={styles.time}>{n.time}</Text>
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </Card>
           </View>
         ))}
@@ -109,4 +201,9 @@ const styles = StyleSheet.create({
   text: { fontSize: 13, lineHeight: 18, color: colors.ink },
   who: { fontFamily: fonts.displaySemiBold },
   time: { fontFamily: fonts.displayItalic, fontSize: 11, color: colors.ink3, marginTop: 3 },
+  empty: { textAlign: 'center', paddingVertical: 40, color: colors.ink2, fontFamily: fonts.displayItalic },
+  emptyCard: { padding: 28, alignItems: 'center', borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, marginTop: 20 },
+  emptyEmoji: { fontSize: 40, marginBottom: 10 },
+  emptyTitle: { fontFamily: fonts.displayMedium, fontSize: 15, color: colors.ink, marginBottom: 4 },
+  emptySub: { fontSize: 12, color: colors.ink3, textAlign: 'center', lineHeight: 18 },
 });

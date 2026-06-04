@@ -33,6 +33,7 @@ export type RootStackParams = {
   // Anonymes flow
   AnonymesCreate: undefined;
   AnonymesLink: { code: string };
+  AnonymesLinkMessages: { linkId: string; code: string; prompt: string };
   AnonymesRead: { messageId: string };
   AnonymesReport: { messageId: string };
 
@@ -61,10 +62,11 @@ export type RootStackParams = {
 
   // Sécurité & paramètres avancés (V1.0 — "Bientôt" devenu réel)
   Sessions: { variant?: 'sessions' | 'devices' } | undefined;
-  Privacy: undefined;
+  Privacy: { fromSendFlow?: boolean } | undefined;
   Birthday: undefined;
   Language: undefined;
   ChangePassword: undefined;
+  NotificationsPref: undefined;
   KYCUpload: { docType: 'CNI' | 'PASSPORT' | 'PERMIS' };
 
   // Dev only

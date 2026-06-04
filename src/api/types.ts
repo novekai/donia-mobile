@@ -29,10 +29,14 @@ export type User = {
   referredBy?: string | null;
   avatarUrl?: string | null;
   birthdayOptIn?: boolean;
+  birthdayPublic?: boolean;
   showEmailPublic?: boolean;
   showPhonePublic?: boolean;
   showAvatarPublic?: boolean;
   preferredLanguage?: 'fr-FR' | 'en-US';
+  notifPushEnabled?: boolean;
+  notifEmailEnabled?: boolean;
+  notifWhatsAppEnabled?: boolean;
   createdAt: string;
   wallet?: Wallet;
 };
@@ -43,10 +47,22 @@ export type Wallet = {
   currency: string;
 };
 
+// Infos publiques du sender qu'on remonte sur la carte côté destinataire.
+// Les champs autres que `name` peuvent être null si le sender n'a pas autorisé leur affichage.
+export type CardSenderPublic = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+};
+
 export type Card = {
   id: string;
   redeemCode: string;
   senderId: string;
+  sender?: CardSenderPublic | null;
   recipientId?: string | null;
   recipientPhone: string;
   recipientEmail?: string | null;

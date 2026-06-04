@@ -1,7 +1,7 @@
 // TxDetail — fetches the real card from the API and renders the right state
 // (success / pending payment / failed). Replaces the previous mocked layout.
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, AppState } from 'react-native';
+import { View, Text, Image, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
@@ -255,6 +255,42 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
           {card.status !== 'CREATED' && <Row label="Référence" value={card.redeemCode} mono />}
           <Row label="Date" value={formatDate(card.createdAt)} last />
         </Card>
+
+        {/* Bloc "De la part de" — visible uniquement côté destinataire (le sender se voit
+            déjà comme expéditeur ailleurs). Les infos sender (avatar/téléphone/email) sont
+            filtrées côté backend selon les préférences de confidentialité du sender. */}
+        {card.sender && card.senderId !== card.recipientId && (
+          <View style={{ marginTop: 16 }}>
+            <Text style={styles.sectionLabel}>De la part de</Text>
+            <Card pad={14}>
+              <View style={styles.senderRow}>
+                <View style={styles.senderAvatar}>
+                  {card.sender.avatarUrl ? (
+                    <Image source={{ uri: card.sender.avatarUrl }} style={styles.senderAvatarImg} />
+                  ) : (
+                    <Text style={styles.senderInitial}>
+                      {(card.sender.name || '?').trim()[0]?.toUpperCase() ?? '?'}
+                    </Text>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.senderName}>{card.sender.name}</Text>
+                  {card.sender.phone && (
+                    <Text style={styles.senderContact}>📞 {formatPhone(card.sender.phone)}</Text>
+                  )}
+                  {card.sender.email && (
+                    <Text style={styles.senderContact}>✉️ {card.sender.email}</Text>
+                  )}
+                  {!card.sender.phone && !card.sender.email && !card.sender.avatarUrl && (
+                    <Text style={styles.senderHidden}>
+                      L'expéditeur a choisi de garder ses coordonnées privées
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -367,4 +403,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   reportText: { fontFamily: fonts.displayMedium, fontSize: 14, color: colors.ink2 },
+
+  sectionLabel: { fontFamily: fonts.displayItalic, fontSize: 13, color: colors.ink2, marginBottom: 8, paddingLeft: 4 },
+  senderRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  senderAvatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.coral, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  senderAvatarImg: { width: 54, height: 54, borderRadius: 27 },
+  senderInitial: { fontFamily: fonts.displaySemiBold, fontSize: 22, color: colors.bg },
+  senderName: { fontFamily: fonts.displaySemiBold, fontSize: 16, color: colors.ink },
+  senderContact: { marginTop: 3, fontSize: 12, color: colors.ink2 },
+  senderHidden: { marginTop: 4, fontSize: 11, color: colors.ink3, fontStyle: 'italic' },
 });

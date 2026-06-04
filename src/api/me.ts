@@ -9,9 +9,10 @@ export function getMe(): Promise<{ user: User }> {
 // Champs éditables via PATCH /v1/me. Doit rester en phase avec patchSchema (backend/src/routes/me.ts).
 type EditableProfileFields =
   | 'name' | 'whatsapp' | 'email' | 'sex' | 'dob' | 'city' | 'country'
-  | 'birthdayOptIn'
+  | 'birthdayOptIn' | 'birthdayPublic'
   | 'showEmailPublic' | 'showPhonePublic' | 'showAvatarPublic'
-  | 'preferredLanguage';
+  | 'preferredLanguage'
+  | 'notifPushEnabled' | 'notifEmailEnabled' | 'notifWhatsAppEnabled';
 
 export function updateMe(patch: Partial<Pick<User, EditableProfileFields>>): Promise<{ user: User }> {
   return apiPatch<{ user: User }>('/v1/me', patch);

@@ -37,7 +37,7 @@ const SECTIONS: Section[] = [
     items: [
       { emoji: '🎂', label: 'Anniversaire', sub: 'Opt-in / opt-out du jour J', color: colors.pink, route: 'Birthday' },
       { emoji: '🕶️', label: 'Confidentialité', sub: 'Qui peut voir mon email / numéro', color: colors.indigo, route: 'Privacy' },
-      { emoji: '🔔', label: 'Notifications', sub: 'Push, email, par catégorie', color: colors.mango, route: 'Notifications' },
+      { emoji: '🔔', label: 'Notifications', sub: 'Push, email, WhatsApp', color: colors.mango, route: 'NotificationsPref' },
       { emoji: '🌍', label: 'Langue & région', sub: 'Français · FCFA', color: colors.mint, route: 'Language' },
       { emoji: '🎁', label: 'Parrainage', sub: 'Invite tes amis · 1 % à vie', color: colors.plum, route: 'Referral' },
     ],

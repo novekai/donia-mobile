@@ -46,6 +46,10 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
   const [recipientEmailInput, setRecipientEmailInput] = useState('');
   const [recipientWaInput, setRecipientWaInput] = useState('');
   const [loading, setLoading] = useState(false);
+  // Le user doit revoir/valider ses préférences de confidentialité avant chaque envoi.
+  // On l'envoie sur l'écran Privacy avec un bouton "Continuer vers le paiement" qui
+  // ramène ici, et alors privacyChecked passe à true.
+  const [privacyChecked, setPrivacyChecked] = useState(false);
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const senderName = meQuery.data?.user.name?.split(' ')[0] ?? 'Toi';
@@ -70,6 +74,16 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
     if (!walletEnough && payMethod === 'wallet') setPayMethod('mobile_money');
   }, [walletEnough, payMethod]);
 
+  // Quand on revient sur cet écran via goBack() depuis PrivacyScreen, on considère
+  // que la confidentialité vient d'être validée par l'utilisateur.
+  React.useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      // Si on a été envoyé sur Privacy puis revenus → privacyChecked devient true.
+      // Le state ne se "désinitialise" pas tant que l'utilisateur reste sur ce flow.
+    });
+    return unsub;
+  }, [navigation]);
+
   async function onSend() {
     if (loading) return;
     if (amountNum <= 0) return Alert.alert('Montant invalide');
@@ -81,6 +95,12 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
     }
     if (channel === 'whatsapp' && !recipientWaInput.trim() && !recipientPhone) {
       return Alert.alert('Numéro WhatsApp manquant', 'Entre un numéro WhatsApp.');
+    }
+    // Gate confidentialité — première étape obligatoire avant tout paiement.
+    if (!privacyChecked) {
+      setPrivacyChecked(true);
+      navigation.navigate('Privacy', { fromSendFlow: true });
+      return;
     }
     setLoading(true);
     try {
@@ -261,10 +281,26 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label={loading ? 'Envoi…' : `Envoyer ${amount} FCFA ✨`} pulse shimmer disabled={loading} onPress={onSend} />
+        <Button
+          label={
+            loading
+              ? 'Envoi…'
+              : !privacyChecked
+              ? 'Vérifier la confidentialité 🔐'
+              : `Envoyer ${amount} FCFA ✨`
+          }
+          pulse
+          shimmer
+          disabled={loading}
+          onPress={onSend}
+        />
         <View style={styles.secure}>
           <IconLock color={colors.ink3} />
-          <Text style={styles.secureText}>Paiement sécurisé · FedaPay</Text>
+          <Text style={styles.secureText}>
+            {!privacyChecked
+              ? 'On vérifie tes préférences de partage avant le paiement'
+              : 'Paiement sécurisé · FedaPay'}
+          </Text>
         </View>
       </View>
     </ScreenContainer>

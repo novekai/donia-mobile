@@ -26,11 +26,12 @@ export function suspendAnonymousLink(id: string): Promise<{ link: AnonymousLink 
 
 // ── MESSAGES ──
 
-export function listAnonymousMessages(opts: { cursor?: string; limit?: number } = {}): Promise<{
+export function listAnonymousMessages(opts: { linkId?: string; cursor?: string; limit?: number } = {}): Promise<{
   items: AnonymousMessage[];
   nextCursor: string | null;
 }> {
   const q = new URLSearchParams();
+  if (opts.linkId) q.set('linkId', opts.linkId);
   if (opts.cursor) q.set('cursor', opts.cursor);
   if (opts.limit) q.set('limit', String(opts.limit));
   const qs = q.toString();

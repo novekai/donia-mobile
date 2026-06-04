@@ -15,21 +15,22 @@ import { getApiErrorMessage } from '../../api/client';
 export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>) {
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
-  const [busy, setBusy] = React.useState(false);
+  const [busy, setBusy] = React.useState<string | null>(null);
 
-  const on = Boolean(meQuery.data?.user.birthdayOptIn ?? true);
+  const optIn = Boolean(meQuery.data?.user.birthdayOptIn ?? true);
+  const pub = Boolean(meQuery.data?.user.birthdayPublic ?? false);
   const dob = meQuery.data?.user.dob ?? null;
 
-  async function toggle() {
+  async function toggle(key: 'birthdayOptIn' | 'birthdayPublic', next: boolean) {
     if (busy) return;
-    setBusy(true);
+    setBusy(key);
     try {
-      await updateMe({ birthdayOptIn: !on });
+      await updateMe({ [key]: next } as Record<string, boolean>);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
     } catch (e) {
       Alert.alert('Erreur', getApiErrorMessage(e));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -53,7 +54,7 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
               </Text>
             </Card>
 
-            <Pressable onPress={toggle} disabled={busy} style={{ marginTop: 14 }}>
+            <Pressable onPress={() => toggle('birthdayOptIn', !optIn)} disabled={busy === 'birthdayOptIn'} style={{ marginTop: 14 }}>
               <Card pad={0}>
                 <View style={styles.row}>
                   <View style={styles.iconBox}><Text style={{ fontSize: 22 }}>🎉</Text></View>
@@ -61,8 +62,25 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
                     <Text style={styles.label}>Notifications d'anniversaire</Text>
                     <Text style={styles.sub}>Reçois un rappel 3 jours avant l'anniversaire de tes destinataires</Text>
                   </View>
-                  <View style={[styles.toggle, on && { backgroundColor: colors.coral }]}>
-                    <View style={[styles.toggleDot, { left: on ? 22 : 2 }]} />
+                  <View style={[styles.toggle, optIn && { backgroundColor: colors.coral }]}>
+                    <View style={[styles.toggleDot, { left: optIn ? 22 : 2 }]} />
+                  </View>
+                </View>
+              </Card>
+            </Pressable>
+
+            <Pressable onPress={() => toggle('birthdayPublic', !pub)} disabled={busy === 'birthdayPublic'} style={{ marginTop: 10 }}>
+              <Card pad={0}>
+                <View style={styles.row}>
+                  <View style={styles.iconBox}><Text style={{ fontSize: 22 }}>🎂</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Annoncer mon anniversaire</Text>
+                    <Text style={styles.sub}>
+                      Le jour J, "C'est mon anniv 🎉" apparaît sur ton profil — tes proches peuvent t'envoyer des cartes spontanément
+                    </Text>
+                  </View>
+                  <View style={[styles.toggle, pub && { backgroundColor: colors.coral }]}>
+                    <View style={[styles.toggleDot, { left: pub ? 22 : 2 }]} />
                   </View>
                 </View>
               </Card>
