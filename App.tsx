@@ -16,6 +16,7 @@ import { queryClient } from './src/lib/queryClient';
 import { useAuthStore } from './src/store/auth';
 import { registerForPushNotificationsAsync } from './src/lib/pushTokens';
 import { attachPushResponseListeners } from './src/lib/pushRouter';
+import { initI18n } from './src/i18n';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -24,6 +25,21 @@ export default function App() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.token);
   const [forceReady, setForceReady] = useState(false);
+  const [i18nReady, setI18nReady] = useState(false);
+
+  // Init i18n une fois — charge la langue stockée + ressources fr/en. Bloquant
+  // mais rapide (lecture AsyncStorage uniquement). Failsafe : on continue après 1s.
+  useEffect(() => {
+    let mounted = true;
+    initI18n()
+      .catch(() => {})
+      .finally(() => mounted && setI18nReady(true));
+    const t = setTimeout(() => mounted && setI18nReady(true), 1000);
+    return () => {
+      mounted = false;
+      clearTimeout(t);
+    };
+  }, []);
 
   // Register Expo push token when logged in (best-effort, non-blocking)
   useEffect(() => {
@@ -53,7 +69,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, []);
 
-  const ready = (fontsLoaded || fontError !== null || forceReady) && hydrated;
+  const ready = (fontsLoaded || fontError !== null || forceReady) && hydrated && i18nReady;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});

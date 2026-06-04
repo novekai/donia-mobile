@@ -5,6 +5,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { Sparkle } from '../../components/deco/Sparkle';
@@ -40,6 +41,7 @@ function variantFor(id: string): LinkVariant {
 }
 
 export function AnonymesScreen({ navigation }: MainTabScreenProps<'Anonyme'>) {
+  const { t } = useTranslation();
   const twinkleStyle = useTwinkle();
   const queryClient = useQueryClient();
 
@@ -70,8 +72,8 @@ export function AnonymesScreen({ navigation }: MainTabScreenProps<'Anonyme'>) {
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.headerSub}>Ta boîte secrète</Text>
-            <Text style={styles.headerTitle}>Anonymes ✨</Text>
+            <Text style={styles.headerSub}>{t('anonymes.tabSub')}</Text>
+            <Text style={styles.headerTitle}>{t('anonymes.tabTitle')}</Text>
           </View>
           <HeaderAvatar />
         </View>
@@ -84,29 +86,27 @@ export function AnonymesScreen({ navigation }: MainTabScreenProps<'Anonyme'>) {
           >
             <BrandGradient variant="indigo" style={styles.createCtaInner}>
               <IconPlus size={16} color={colors.bg} strokeWidth={2.5} />
-              <Text style={styles.createCtaText}>Créer un nouveau lien</Text>
+              <Text style={styles.createCtaText}>{t('anonymes.createBtn')}</Text>
             </BrandGradient>
           </Pressable>
         </View>
 
         <View style={{ paddingHorizontal: 22, marginTop: 22 }}>
           {linksQuery.isLoading && (
-            <Text style={styles.loading}>Chargement de tes liens…</Text>
+            <Text style={styles.loading}>{t('common.loading')}</Text>
           )}
 
           {!linksQuery.isLoading && links.length === 0 && (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyEmoji}>💌</Text>
-              <Text style={styles.emptyTitle}>Aucun lien anonyme</Text>
-              <Text style={styles.emptySub}>
-                Crée ton premier lien anonyme. Tu pourras le partager sur tes stories et recevoir des messages de tes proches.
-              </Text>
+              <Text style={styles.emptyTitle}>{t('anonymes.emptyTitle')}</Text>
+              <Text style={styles.emptySub}>{t('anonymes.emptyBody')}</Text>
             </View>
           )}
 
           {activeLinks.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>Mes liens actifs</Text>
+              <Text style={styles.sectionLabel}>{t('anonymes.myActive')}</Text>
               <View style={{ gap: 12 }}>
                 {activeLinks.map((link) => (
                   <LinkCard
@@ -128,7 +128,7 @@ export function AnonymesScreen({ navigation }: MainTabScreenProps<'Anonyme'>) {
 
           {archivedLinks.length > 0 && (
             <>
-              <Text style={[styles.sectionLabel, { marginTop: 22 }]}>Anciens liens</Text>
+              <Text style={[styles.sectionLabel, { marginTop: 22 }]}>{t('anonymes.archived')}</Text>
               <View style={{ gap: 12 }}>
                 {archivedLinks.map((link) => (
                   <LinkCard
@@ -164,6 +164,7 @@ function LinkCard({
   dimmed?: boolean;
   twinkleStyle?: ReturnType<typeof useTwinkle>;
 }) {
+  const { t } = useTranslation();
   const variant = variantFor(link.id) as LinkVariant;
   const count = link._count?.messages ?? 0;
   const url = `${SHARE_URL_BASE}/${link.code}`;
@@ -182,7 +183,7 @@ function LinkCard({
           <View style={styles.linkBadge}>
             <IconAnonyme size={12} color={colors.indigoDeep} />
             <Text style={styles.linkBadgeText}>
-              {count} message{count > 1 ? 's' : ''}
+              {t('anonymes.linkBadgeMsgs', { count })}
             </Text>
           </View>
           <Text style={styles.linkDate}>{relativeTime(link.createdAt)}</Text>

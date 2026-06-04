@@ -5,6 +5,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, shadow } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { IconHome, IconSend, IconAnonyme, IconHistory } from './Icons';
@@ -13,11 +14,12 @@ import { useAuthStore } from '../../store/auth';
 
 export type TabId = 'home' | 'send' | 'anonyme' | 'history';
 
-const TABS: { id: TabId; label: string; Icon: typeof IconHome }[] = [
-  { id: 'home', label: 'Accueil', Icon: IconHome },
-  { id: 'send', label: 'Envoyer', Icon: IconSend },
-  { id: 'anonyme', label: 'Anonymes', Icon: IconAnonyme },
-  { id: 'history', label: 'Activité', Icon: IconHistory },
+type TabDef = { id: TabId; labelKey: string; Icon: typeof IconHome };
+const TABS: TabDef[] = [
+  { id: 'home', labelKey: 'tabs.home', Icon: IconHome },
+  { id: 'send', labelKey: 'tabs.send', Icon: IconSend },
+  { id: 'anonyme', labelKey: 'tabs.anonyme', Icon: IconAnonyme },
+  { id: 'history', labelKey: 'tabs.history', Icon: IconHistory },
 ];
 
 type Props = {
@@ -26,6 +28,7 @@ type Props = {
 };
 
 export function TabBar({ active, onPress }: Props) {
+  const { t } = useTranslation();
   const isAuthed = useAuthStore((s) => !!s.token);
   const unreadQuery = useQuery({
     queryKey: ['anon-unread'],
@@ -43,7 +46,7 @@ export function TabBar({ active, onPress }: Props) {
       style={styles.wrap}
     >
       <View style={[styles.bar, shadow.e2]}>
-        {TABS.map(({ id, label, Icon }) => {
+        {TABS.map(({ id, labelKey, Icon }) => {
           const on = id === active;
           const showBadge = id === 'anonyme' && unreadCount > 0;
           return (
@@ -59,7 +62,7 @@ export function TabBar({ active, onPress }: Props) {
               )}
               <Icon color={on ? colors.coral : colors.ink2} />
               <Text style={[styles.label, { color: on ? colors.coral : colors.ink2, fontFamily: on ? fonts.displaySemiBold : fonts.displayMedium }]}>
-                {label}
+                {t(labelKey)}
               </Text>
             </Pressable>
           );

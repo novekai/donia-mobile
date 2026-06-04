@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -13,26 +14,29 @@ import { RootStackScreenProps } from '../../navigation/types';
 import { getMe, updateMe } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 
-type Toggle = {
-  key: 'showEmailPublic' | 'showPhonePublic' | 'showAvatarPublic';
-  emoji: string;
-  label: string;
-  sub: string;
-};
+type ToggleKey = 'showEmailPublic' | 'showPhonePublic' | 'showAvatarPublic';
+type Toggle = { key: ToggleKey; emoji: string };
 
 const TOGGLES: Toggle[] = [
-  { key: 'showAvatarPublic', emoji: '🖼️', label: 'Photo de profil visible', sub: 'Les destinataires voient ton avatar sur les cartes que tu leur envoies' },
-  { key: 'showPhonePublic', emoji: '📞', label: 'Numéro visible aux contacts', sub: 'Tes filleuls et destinataires peuvent voir ton numéro de téléphone' },
-  { key: 'showEmailPublic', emoji: '✉️', label: 'Email visible aux contacts', sub: 'Ton email apparaît sur ta fiche de contact (rare)' },
+  { key: 'showAvatarPublic', emoji: '🖼️' },
+  { key: 'showPhonePublic', emoji: '📞' },
+  { key: 'showEmailPublic', emoji: '✉️' },
 ];
 
 export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Privacy'>) {
+  const { t } = useTranslation();
   const fromSendFlow = Boolean(route.params?.fromSendFlow);
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const [busy, setBusy] = React.useState<string | null>(null);
 
-  async function toggle(key: Toggle['key']) {
+  const TOGGLE_LABELS: Record<ToggleKey, { label: string; sub: string }> = {
+    showAvatarPublic: { label: t('privacy.avatarLabel'), sub: t('privacy.avatarSub') },
+    showPhonePublic: { label: t('privacy.phoneLabel'), sub: t('privacy.phoneSub') },
+    showEmailPublic: { label: t('privacy.emailLabel'), sub: t('privacy.emailSub') },
+  };
+
+  async function toggle(key: ToggleKey) {
     if (busy || !meQuery.data) return;
     setBusy(key);
     const current = Boolean(meQuery.data.user[key]);
@@ -40,7 +44,7 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
       await updateMe({ [key]: !current } as Record<string, boolean>);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
     } catch (e) {
-      Alert.alert('Erreur', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setBusy(null);
     }
@@ -50,15 +54,13 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader
-        title={fromSendFlow ? 'Avant d\'envoyer 🔐' : 'Confidentialité 🔐'}
+        title={fromSendFlow ? t('privacy.titleSendFlow') : t('privacy.titleDefault')}
         onBack={() => navigation.goBack()}
       />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: fromSendFlow ? 120 : 40 }}>
         <Text style={styles.intro}>
-          {fromSendFlow
-            ? 'Choisis ce que ton destinataire peut voir de toi sur la carte. Tu peux modifier ces choix à tout moment dans Paramètres → Confidentialité.'
-            : 'Choisis qui peut voir tes informations personnelles. Tes données sont toujours sécurisées et chiffrées.'}
+          {fromSendFlow ? t('privacy.introSendFlow') : t('privacy.introDefault')}
         </Text>
 
         {meQuery.isLoading && (
@@ -69,20 +71,20 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
 
         {meQuery.data && (
           <Card pad={0}>
-            {TOGGLES.map((t, i) => {
-              const on = Boolean(meQuery.data!.user[t.key]);
-              const isBusy = busy === t.key;
+            {TOGGLES.map((toggleDef, i) => {
+              const on = Boolean(meQuery.data!.user[toggleDef.key]);
+              const isBusy = busy === toggleDef.key;
               return (
                 <Pressable
-                  key={t.key}
-                  onPress={() => toggle(t.key)}
+                  key={toggleDef.key}
+                  onPress={() => toggle(toggleDef.key)}
                   disabled={isBusy}
                   style={[styles.row, i < TOGGLES.length - 1 && styles.rowDivider]}
                 >
-                  <View style={styles.iconBox}><Text style={{ fontSize: 20 }}>{t.emoji}</Text></View>
+                  <View style={styles.iconBox}><Text style={{ fontSize: 20 }}>{toggleDef.emoji}</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>{t.label}</Text>
-                    <Text style={styles.sub}>{t.sub}</Text>
+                    <Text style={styles.label}>{TOGGLE_LABELS[toggleDef.key].label}</Text>
+                    <Text style={styles.sub}>{TOGGLE_LABELS[toggleDef.key].sub}</Text>
                   </View>
                   <View style={[styles.toggle, on && { backgroundColor: colors.coral }]}>
                     <View style={[styles.toggleDot, { left: on ? 22 : 2 }]} />
@@ -97,7 +99,7 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
       {fromSendFlow && (
         <View style={styles.footer}>
           <Button
-            label="Continuer vers le paiement"
+            label={t('privacy.continueToPayment')}
             pulse
             onPress={() => navigation.goBack()}
           />

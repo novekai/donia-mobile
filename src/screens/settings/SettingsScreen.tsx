@@ -2,6 +2,7 @@
 // Alert "bientôt" sur les options Phase 3 non-encore-implémentées).
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Linking } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -23,37 +24,38 @@ type Item = {
 };
 type Section = { title: string; items: Item[] };
 
-const SECTIONS: Section[] = [
-  {
-    title: 'Compte',
-    items: [
-      { emoji: '👤', label: 'Mes informations', sub: 'Nom, email, téléphone, date de naissance', color: colors.coral, route: 'MyInfo' },
-      { emoji: '🪪', label: "Vérification d'identité", sub: 'KYC pour les retraits', color: colors.mango, route: 'KYC' },
-      { emoji: '🔒', label: 'Sécurité', sub: 'Mot de passe, 2FA, sessions', color: colors.indigo, route: 'Security' },
-    ],
-  },
-  {
-    title: 'Préférences',
-    items: [
-      { emoji: '🎂', label: 'Anniversaire', sub: 'Opt-in / opt-out du jour J', color: colors.pink, route: 'Birthday' },
-      { emoji: '🕶️', label: 'Confidentialité', sub: 'Qui peut voir mon email / numéro', color: colors.indigo, route: 'Privacy' },
-      { emoji: '🔔', label: 'Notifications', sub: 'Push, email, WhatsApp', color: colors.mango, route: 'NotificationsPref' },
-      { emoji: '🌍', label: 'Langue & région', sub: 'Français · FCFA', color: colors.mint, route: 'Language' },
-      { emoji: '🎁', label: 'Parrainage', sub: 'Invite tes amis · 1 % à vie', color: colors.plum, route: 'Referral' },
-    ],
-  },
-  {
-    title: 'Aide & légal',
-    items: [
-      { emoji: '💬', label: 'Centre d\'aide', sub: 'Nous contacter', color: colors.mint, url: 'mailto:contact@doniia.com?subject=Aide%20Donia' },
-      { emoji: '📄', label: 'CGU', sub: 'Conditions générales d\'utilisation', color: colors.ink2, url: 'https://doniia.com/cgu' },
-      { emoji: '🔐', label: 'Confidentialité', sub: 'Politique de confidentialité', color: colors.ink2, url: 'https://doniia.com/confidentialite' },
-      { emoji: 'ℹ️', label: 'À propos de Donia', sub: 'NOVEKAI LTD · doniia.com', color: colors.indigo, url: 'https://doniia.com' },
-    ],
-  },
-];
-
 export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>) {
+  const { t, i18n } = useTranslation();
+  const langSubKey = i18n.language === 'en' ? 'settings.languageSubEN' : 'settings.languageSub';
+  const SECTIONS: Section[] = [
+    {
+      title: t('settings.sectionAccount'),
+      items: [
+        { emoji: '👤', label: t('settings.myInfo'), sub: t('settings.myInfoSub'), color: colors.coral, route: 'MyInfo' },
+        { emoji: '🪪', label: t('settings.kyc'), sub: t('settings.kycSub'), color: colors.mango, route: 'KYC' },
+        { emoji: '🔒', label: t('settings.security'), sub: t('settings.securitySub'), color: colors.indigo, route: 'Security' },
+      ],
+    },
+    {
+      title: t('settings.sectionPreferences'),
+      items: [
+        { emoji: '🎂', label: t('settings.birthday'), sub: t('settings.birthdaySub'), color: colors.pink, route: 'Birthday' },
+        { emoji: '🕶️', label: t('settings.privacy'), sub: t('settings.privacySub'), color: colors.indigo, route: 'Privacy' },
+        { emoji: '🔔', label: t('settings.notifications'), sub: t('settings.notificationsSub'), color: colors.mango, route: 'NotificationsPref' },
+        { emoji: '🌍', label: t('settings.language'), sub: t(langSubKey), color: colors.mint, route: 'Language' },
+        { emoji: '🎁', label: t('settings.referralRow'), sub: t('settings.referralRowSub'), color: colors.plum, route: 'Referral' },
+      ],
+    },
+    {
+      title: t('settings.sectionLegal'),
+      items: [
+        { emoji: '💬', label: t('settings.helpCenter'), sub: t('settings.helpCenterSub'), color: colors.mint, url: 'mailto:contact@doniia.com?subject=Aide%20Donia' },
+        { emoji: '📄', label: t('settings.cgu'), sub: t('settings.cguSub'), color: colors.ink2, url: 'https://doniia.com/cgu' },
+        { emoji: '🔐', label: t('settings.privacyPolicy'), sub: t('settings.privacyPolicySub'), color: colors.ink2, url: 'https://doniia.com/confidentialite' },
+        { emoji: 'ℹ️', label: t('settings.about'), sub: t('settings.aboutSub'), color: colors.indigo, url: 'https://doniia.com' },
+      ],
+    },
+  ];
   function onPressItem(it: Item) {
     if (it.route) {
       navigation.navigate(it.route as never);
@@ -78,7 +80,7 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Paramètres" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('settings.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
         <View style={{ paddingHorizontal: 22, paddingTop: 8 }}>

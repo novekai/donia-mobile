@@ -3,6 +3,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -15,24 +16,25 @@ import { getApiErrorMessage } from '../../api/client';
 
 type ToggleKey = 'notifPushEnabled' | 'notifEmailEnabled' | 'notifWhatsAppEnabled';
 
-type Toggle = {
-  key: ToggleKey;
-  emoji: string;
-  label: string;
-  sub: string;
-  color: string;
-};
+type Toggle = { key: ToggleKey; emoji: string; color: string };
 
 const TOGGLES: Toggle[] = [
-  { key: 'notifPushEnabled', emoji: '🔔', label: 'Notifications push', sub: 'Sur ton téléphone (cartes reçues, paiements, parrainage)', color: colors.coral },
-  { key: 'notifEmailEnabled', emoji: '✉️', label: 'Emails', sub: 'Récapitulatifs, sécurité, confirmation de transactions', color: colors.indigo },
-  { key: 'notifWhatsAppEnabled', emoji: '💬', label: 'WhatsApp', sub: 'Cartes reçues, codes de retrait, anniversaires de proches', color: '#25D366' },
+  { key: 'notifPushEnabled', emoji: '🔔', color: colors.coral },
+  { key: 'notifEmailEnabled', emoji: '✉️', color: colors.indigo },
+  { key: 'notifWhatsAppEnabled', emoji: '💬', color: '#25D366' },
 ];
 
 export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'NotificationsPref'>) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const [busy, setBusy] = React.useState<string | null>(null);
+
+  const LABELS: Record<ToggleKey, { label: string; sub: string }> = {
+    notifPushEnabled: { label: t('notifPref.push'), sub: t('notifPref.pushSub') },
+    notifEmailEnabled: { label: t('notifPref.email'), sub: t('notifPref.emailSub') },
+    notifWhatsAppEnabled: { label: t('notifPref.whatsapp'), sub: t('notifPref.whatsappSub') },
+  };
 
   async function toggle(key: ToggleKey) {
     if (busy || !meQuery.data) return;
@@ -42,7 +44,7 @@ export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'No
       await updateMe({ [key]: !current } as Record<string, boolean>);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
     } catch (e) {
-      Alert.alert('Erreur', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setBusy(null);
     }
@@ -51,12 +53,10 @@ export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'No
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Notifications 🔔" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('notifPref.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 }}>
-        <Text style={styles.intro}>
-          Choisis comment Donia te contacte. Les notifications de sécurité critique restent toujours envoyées.
-        </Text>
+        <Text style={styles.intro}>{t('notifPref.intro')}</Text>
 
         {meQuery.isLoading && (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
@@ -66,22 +66,22 @@ export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'No
 
         {meQuery.data && (
           <Card pad={0}>
-            {TOGGLES.map((t, i) => {
-              const on = Boolean((meQuery.data!.user as Record<string, unknown>)[t.key] ?? true);
-              const isBusy = busy === t.key;
+            {TOGGLES.map((tog, i) => {
+              const on = Boolean((meQuery.data!.user as Record<string, unknown>)[tog.key] ?? true);
+              const isBusy = busy === tog.key;
               return (
                 <Pressable
-                  key={t.key}
-                  onPress={() => toggle(t.key)}
+                  key={tog.key}
+                  onPress={() => toggle(tog.key)}
                   disabled={isBusy}
                   style={[styles.row, i < TOGGLES.length - 1 && styles.rowDivider]}
                 >
-                  <View style={[styles.iconBox, { backgroundColor: `${t.color}22` }]}>
-                    <Text style={{ fontSize: 22 }}>{t.emoji}</Text>
+                  <View style={[styles.iconBox, { backgroundColor: `${tog.color}22` }]}>
+                    <Text style={{ fontSize: 22 }}>{tog.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>{t.label}</Text>
-                    <Text style={styles.sub}>{t.sub}</Text>
+                    <Text style={styles.label}>{LABELS[tog.key].label}</Text>
+                    <Text style={styles.sub}>{LABELS[tog.key].sub}</Text>
                   </View>
                   <View style={[styles.toggle, on && { backgroundColor: colors.coral }]}>
                     <View style={[styles.toggleDot, { left: on ? 22 : 2 }]} />
@@ -92,9 +92,7 @@ export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'No
           </Card>
         )}
 
-        <Text style={styles.footnote}>
-          💡 Pour ne plus rien recevoir, désactive les trois canaux. Tu peux les réactiver à tout moment.
-        </Text>
+        <Text style={styles.footnote}>{t('notifPref.footnote')}</Text>
       </ScrollView>
     </ScreenContainer>
   );

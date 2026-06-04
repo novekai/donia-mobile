@@ -3,6 +3,7 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ConcentricRings } from '../../components/deco/ConcentricRings';
@@ -107,44 +108,45 @@ type StateMeta = {
   showResend: boolean;
 };
 
-const STATE_BY_STATUS: Record<CardModel['status'], StateMeta> = {
-  CREATED: {
-    title: 'En attente de paiement',
-    sub: () => 'Termine le paiement pour livrer la carte.',
-    badge: 'mango',
-    showResend: false,
-  },
-  SENT: {
-    title: 'Envoi réussi !',
-    sub: (c) => `${formatAmount(c.amount)} FCFA à ${c.recipientName ?? formatPhone(c.recipientPhone)}`,
-    badge: 'mint',
-    showResend: true,
-  },
-  REDEEMED: {
-    title: 'Carte convertie ✨',
-    sub: (c) =>
-      `${c.recipientName ?? formatPhone(c.recipientPhone)} a converti ta carte de ${formatAmount(c.amount)} FCFA.`,
-    badge: 'mint',
-    showResend: false,
-  },
-  EXPIRED: {
-    title: 'Carte expirée',
-    sub: () => 'Le délai de retrait est dépassé. Tu peux en envoyer une nouvelle.',
-    badge: 'coral',
-    showResend: false,
-  },
-  CANCELLED: {
-    title: 'Carte annulée',
-    sub: () => 'Cette carte a été annulée.',
-    badge: 'coral',
-    showResend: false,
-  },
-};
-
 export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDetail'>) {
+  const { t } = useTranslation();
   const txId = route.params?.txId;
   const queryClient = useQueryClient();
   const [resending, setResending] = React.useState(false);
+
+  const STATE_BY_STATUS: Record<CardModel['status'], StateMeta> = {
+    CREATED: {
+      title: t('txDetail.stateCreatedTitle'),
+      sub: () => t('txDetail.stateCreatedSub'),
+      badge: 'mango',
+      showResend: false,
+    },
+    SENT: {
+      title: t('txDetail.stateSentTitle'),
+      sub: (c) => `${formatAmount(c.amount)} FCFA · ${c.recipientName ?? formatPhone(c.recipientPhone)}`,
+      badge: 'mint',
+      showResend: true,
+    },
+    REDEEMED: {
+      title: t('txDetail.stateRedeemedTitle'),
+      sub: (c) =>
+        `${c.recipientName ?? formatPhone(c.recipientPhone)} · ${formatAmount(c.amount)} FCFA`,
+      badge: 'mint',
+      showResend: false,
+    },
+    EXPIRED: {
+      title: t('txDetail.stateExpiredTitle'),
+      sub: () => t('txDetail.stateExpiredSub'),
+      badge: 'coral',
+      showResend: false,
+    },
+    CANCELLED: {
+      title: t('txDetail.stateCancelledTitle'),
+      sub: () => t('txDetail.stateCancelledSub'),
+      badge: 'coral',
+      showResend: false,
+    },
+  };
 
   const cardQuery = useQuery({
     queryKey: ['card', txId],
@@ -172,9 +174,9 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
     setResending(true);
     try {
       await resendCard(cardQuery.data.id);
-      Alert.alert('Renvoyé !', 'Le destinataire vient de recevoir à nouveau la carte.');
+      Alert.alert(t('txDetail.resendSuccess'), t('txDetail.resendSuccessBody'));
     } catch (e) {
-      Alert.alert('Renvoi échoué', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setResending(false);
     }
@@ -184,7 +186,7 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
     return (
       <ScreenContainer>
         <FunBackground palette="cream" density="sparse" />
-        <ScreenHeader title="Détail" onBack={() => navigation.goBack()} />
+        <ScreenHeader title={t('txDetail.title')} onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.coral} />
         </View>
@@ -196,10 +198,10 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
     return (
       <ScreenContainer>
         <FunBackground palette="cream" density="sparse" />
-        <ScreenHeader title="Détail" onBack={() => navigation.goBack()} />
+        <ScreenHeader title={t('txDetail.title')} onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <Text style={{ fontFamily: fonts.displayMedium, fontSize: 18, color: colors.ink, textAlign: 'center' }}>
-            Impossible de charger cette carte
+            {t('txDetail.loadFail')}
           </Text>
           <Text style={{ marginTop: 8, fontSize: 13, color: colors.ink2, textAlign: 'center' }}>
             {cardQuery.error ? getApiErrorMessage(cardQuery.error) : 'Réessaye plus tard.'}
@@ -218,11 +220,11 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader
-        title="Détail"
+        title={t('txDetail.title')}
         onBack={() => navigation.goBack()}
         rightAction={
-          <Pressable onPress={() => Alert.alert('Code de retrait', card.redeemCode)}>
-            <Text style={styles.share}>Partager</Text>
+          <Pressable onPress={() => Alert.alert(t('txDetail.redeemCodeAlert'), card.redeemCode)}>
+            <Text style={styles.share}>{t('txDetail.share')}</Text>
           </Pressable>
         }
       />
@@ -246,22 +248,17 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
         </Card>
 
         <Card pad={0} style={{ marginTop: 14 }}>
-          <Row label="Destinataire" value={card.recipientName ?? formatPhone(card.recipientPhone)} />
-          <Row label="Téléphone" value={formatPhone(card.recipientPhone)} />
-          <Row label="Opérateur" value={operator} />
-          <Row label="Montant de la carte" value={`${formatAmount(card.amount)} FCFA`} accent bold />
-          {/* Hide the redeem code while the payment is still pending — it
-              should never be shared before the card has actually been paid. */}
-          {card.status !== 'CREATED' && <Row label="Référence" value={card.redeemCode} mono />}
-          <Row label="Date" value={formatDate(card.createdAt)} last />
+          <Row label={t('txDetail.rowRecipient')} value={card.recipientName ?? formatPhone(card.recipientPhone)} />
+          <Row label={t('txDetail.rowPhone')} value={formatPhone(card.recipientPhone)} />
+          <Row label={t('txDetail.rowOperator')} value={operator} />
+          <Row label={t('txDetail.rowAmount')} value={`${formatAmount(card.amount)} FCFA`} accent bold />
+          {card.status !== 'CREATED' && <Row label={t('txDetail.rowRef')} value={card.redeemCode} mono />}
+          <Row label={t('txDetail.rowDate')} value={formatDate(card.createdAt)} last />
         </Card>
 
-        {/* Bloc "De la part de" — visible uniquement côté destinataire (le sender se voit
-            déjà comme expéditeur ailleurs). Les infos sender (avatar/téléphone/email) sont
-            filtrées côté backend selon les préférences de confidentialité du sender. */}
         {card.sender && card.senderId !== card.recipientId && (
           <View style={{ marginTop: 16 }}>
-            <Text style={styles.sectionLabel}>De la part de</Text>
+            <Text style={styles.sectionLabel}>{t('txDetail.fromLabel')}</Text>
             <Card pad={14}>
               <View style={styles.senderRow}>
                 <View style={styles.senderAvatar}>
@@ -282,9 +279,7 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
                     <Text style={styles.senderContact}>✉️ {card.sender.email}</Text>
                   )}
                   {!card.sender.phone && !card.sender.email && !card.sender.avatarUrl && (
-                    <Text style={styles.senderHidden}>
-                      L'expéditeur a choisi de garder ses coordonnées privées
-                    </Text>
+                    <Text style={styles.senderHidden}>{t('txDetail.senderHidden')}</Text>
                   )}
                 </View>
               </View>
@@ -296,7 +291,7 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
       <View style={styles.footer}>
         {state.showResend && (
           <Button
-            label={resending ? 'Envoi en cours…' : 'Renvoyer le même cadeau'}
+            label={resending ? t('txDetail.resendingBtn') : t('txDetail.resendBtn')}
             pulse
             disabled={resending}
             onPress={onResend}
@@ -304,9 +299,9 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
         )}
         <Pressable
           style={styles.report}
-          onPress={() => Alert.alert('Signaler', 'Décris le problème par email à contact@doniia.com.')}
+          onPress={() => Alert.alert(t('txDetail.reportBtn'), t('txDetail.reportBody'))}
         >
-          <Text style={styles.reportText}>Signaler un problème</Text>
+          <Text style={styles.reportText}>{t('txDetail.reportBtn')}</Text>
         </Pressable>
       </View>
     </ScreenContainer>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -14,32 +15,37 @@ import { deleteAccount } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
 
-type Row = { label: string; sub: string; emoji: string; color: string } & ({ kind: 'chev' } | { kind: 'toggle'; key: string });
-
-// Rows visibles sur l'écran Sécurité.
-// - Mot de passe : navigue vers ForgotPassword pour reset (canal email/WhatsApp choisi par l'user).
-// - 2FA email : toggle local + à terme persisté côté backend (V1.1).
-// - Empreinte digitale : retirée, pas implémentée correctement et Apple/Google demanderaient
-//   les permissions biométriques juste pour un toggle décoratif.
-// - Appareils / Sessions : chev placeholder, écrans à venir V1.1.
-const ROWS: Row[] = [
-  { kind: 'chev', label: 'Mot de passe', sub: 'Changer mon mot de passe', emoji: '🔑', color: colors.mango },
-  { kind: 'toggle', key: '2fa', label: 'Authentification 2FA', sub: 'Code par email à chaque connexion', emoji: '🛡️', color: colors.mint },
-  { kind: 'chev', label: 'Appareils connectés', sub: 'Voir mes appareils', emoji: '📱', color: colors.indigo },
-  { kind: 'chev', label: 'Sessions récentes', sub: 'Historique de connexions', emoji: '🕐', color: colors.plum },
-];
+type Row = { id: 'password' | '2fa' | 'devices' | 'sessions'; emoji: string; color: string } & (
+  | { kind: 'chev' }
+  | { kind: 'toggle' }
+);
 
 export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>) {
+  const { t } = useTranslation();
   const [toggles, setToggles] = useState<Record<string, boolean>>({ '2fa': false });
   const [deleting, setDeleting] = useState(false);
   const signOut = useAuthStore((s) => s.signOut);
   const queryClient = useQueryClient();
 
+  const ROWS: Row[] = [
+    { kind: 'chev', id: 'password', emoji: '🔑', color: colors.mango },
+    { kind: 'toggle', id: '2fa', emoji: '🛡️', color: colors.mint },
+    { kind: 'chev', id: 'devices', emoji: '📱', color: colors.indigo },
+    { kind: 'chev', id: 'sessions', emoji: '🕐', color: colors.plum },
+  ];
+
+  const ROW_LABELS: Record<Row['id'], { label: string; sub: string }> = {
+    password: { label: t('security.password'), sub: t('security.passwordSub') },
+    '2fa': { label: t('security.twofa'), sub: t('security.twofaSub') },
+    devices: { label: t('security.devices'), sub: t('security.devicesSub') },
+    sessions: { label: t('security.sessions'), sub: t('security.sessionsSub') },
+  };
+
   function onDeleteAccount() {
     if (deleting) return;
     Alert.alert(
-      'Supprimer ton compte ?',
-      'Cette action est définitive. On supprime :\n\n• Ton nom, email, téléphone, photo\n• Tes liens anonymes et tes messages\n• Tes documents KYC\n\nOn garde, pour des raisons légales BCEAO :\n• Tes transactions financières (10 ans)\n\nTu ne pourras plus te reconnecter avec ce numéro.',
+      t('security.deleteAccount'),
+      t('security.deleteBody'),
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -82,47 +88,42 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Sécurité 🔐" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('security.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 40, gap: 8 }}>
-        {ROWS.map((r, i) => {
+        {ROWS.map((r) => {
+          const labels = ROW_LABELS[r.id];
           const onPressRow = () => {
             if (r.kind === 'toggle') return;
-            if (r.label === 'Mot de passe') {
-              navigation.navigate('ChangePassword');
-            } else if (r.label === 'Appareils connectés') {
-              navigation.navigate('Sessions', { variant: 'devices' });
-            } else if (r.label === 'Sessions récentes') {
-              navigation.navigate('Sessions', { variant: 'sessions' });
-            }
+            if (r.id === 'password') navigation.navigate('ChangePassword');
+            else if (r.id === 'devices') navigation.navigate('Sessions', { variant: 'devices' });
+            else if (r.id === 'sessions') navigation.navigate('Sessions', { variant: 'sessions' });
           };
           const on2FAToggle = () => {
             if (r.kind !== 'toggle') return;
-            setToggles((t) => {
-              const next = { ...t, [r.key]: !t[r.key] };
+            setToggles((prev) => {
+              const next = { ...prev, [r.id]: !prev[r.id] };
               Alert.alert(
-                next[r.key] ? '2FA activée' : '2FA désactivée',
-                next[r.key]
-                  ? 'Un code de vérification sera envoyé à ton email à chaque connexion.'
-                  : 'La double authentification est maintenant désactivée.',
+                next[r.id] ? t('security.twofaEnabledTitle') : t('security.twofaDisabledTitle'),
+                next[r.id] ? t('security.twofaEnabledBody') : t('security.twofaDisabledBody'),
               );
               return next;
             });
           };
           return (
-            <Pressable key={i} onPress={onPressRow}>
+            <Pressable key={r.id} onPress={onPressRow}>
               <Card pad={14} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <View style={[styles.icon, { backgroundColor: `${r.color}22` }]}>
                   <Text style={{ fontSize: 18 }}>{r.emoji}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>{r.label}</Text>
-                  <Text style={styles.sub}>{r.sub}</Text>
+                  <Text style={styles.label}>{labels.label}</Text>
+                  <Text style={styles.sub}>{labels.sub}</Text>
                 </View>
                 {r.kind === 'toggle' ? (
                   <Pressable onPress={on2FAToggle}>
-                    <View style={[styles.toggle, toggles[r.key] && { backgroundColor: colors.coral }]}>
-                      <View style={[styles.toggleDot, { left: toggles[r.key] ? 20 : 2 }]} />
+                    <View style={[styles.toggle, toggles[r.id] && { backgroundColor: colors.coral }]}>
+                      <View style={[styles.toggleDot, { left: toggles[r.id] ? 20 : 2 }]} />
                     </View>
                   </Pressable>
                 ) : (
@@ -135,28 +136,25 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
 
         {/* Zone sensible */}
         <View style={{ marginTop: 14 }}>
-          <Text style={styles.zoneLabel}>Zone sensible</Text>
+          <Text style={styles.zoneLabel}>{t('security.zoneLabel')}</Text>
           <View style={styles.zone}>
             <View style={styles.zoneHeader}>
               <View style={styles.zoneIcon}>
                 <Text style={{ fontSize: 18 }}>🗑️</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.zoneTitle}>Supprimer mon compte</Text>
-                <Text style={styles.zoneSub}>Action définitive — RGPD</Text>
+                <Text style={styles.zoneTitle}>{t('security.deleteAccount')}</Text>
+                <Text style={styles.zoneSub}>{t('security.deleteAccountSub')}</Text>
               </View>
             </View>
-            <Text style={styles.zoneText}>
-              On supprime ton nom, email, téléphone, photo, liens anonymes et documents KYC.{'\n'}
-              On conserve tes transactions financières 10 ans (obligation BCEAO).
-            </Text>
+            <Text style={styles.zoneText}>{t('security.deleteBody')}</Text>
             <Pressable
               onPress={onDeleteAccount}
               disabled={deleting}
               style={[styles.zoneBtn, deleting && { opacity: 0.5 }]}
             >
               <Text style={styles.zoneBtnText}>
-                {deleting ? 'Suppression…' : 'Demander la suppression'}
+                {deleting ? t('security.deleteBtnBusy') : t('security.deleteBtn')}
               </Text>
             </Pressable>
           </View>

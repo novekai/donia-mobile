@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -27,17 +28,17 @@ function relativeTime(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-function dayBucket(iso: string): string {
+function dayBucketKey(iso: string): 'today' | 'yesterday' | 'week' | 'older' {
   const d = new Date(iso);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const yesterday = today - 86400_000;
   const weekAgo = today - 7 * 86400_000;
-  const t = d.getTime();
-  if (t >= today) return "Aujourd'hui";
-  if (t >= yesterday) return 'Hier';
-  if (t >= weekAgo) return 'Cette semaine';
-  return 'Plus ancien';
+  const ts = d.getTime();
+  if (ts >= today) return 'today';
+  if (ts >= yesterday) return 'yesterday';
+  if (ts >= weekAgo) return 'week';
+  return 'older';
 }
 
 // Couleur + emoji par type — par défaut quand le backend ne fournit pas d'emoji.
@@ -58,9 +59,17 @@ function styleFor(n: Notification): { color: string; emoji: string } {
 }
 
 export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifications'>) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'all' | 'unread'>('all');
   const pulseStyle = usePulse();
   const queryClient = useQueryClient();
+
+  const BUCKET_LABEL: Record<'today' | 'yesterday' | 'week' | 'older', string> = {
+    today: t('notifsList.todayBucket'),
+    yesterday: t('notifsList.yesterdayBucket'),
+    week: t('notifsList.weekBucket'),
+    older: t('notifsList.olderBucket'),
+  };
 
   const query = useQuery({
     queryKey: ['notifications', tab],
@@ -81,9 +90,9 @@ export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifi
 
   // Groupe par bucket, en préservant l'ordre desc.
   const groups = useMemo(() => {
-    const buckets = new Map<string, Notification[]>();
+    const buckets = new Map<'today' | 'yesterday' | 'week' | 'older', Notification[]>();
     for (const n of all) {
-      const b = dayBucket(n.createdAt);
+      const b = dayBucketKey(n.createdAt);
       if (!buckets.has(b)) buckets.set(b, []);
       buckets.get(b)!.push(n);
     }
@@ -91,20 +100,20 @@ export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifi
   }, [all]);
 
   const TABS = [
-    { key: 'all' as const, l: 'Toutes', count: all.length },
-    { key: 'unread' as const, l: 'Non lues', count: unreadCount },
+    { key: 'all' as const, l: t('notifsList.tabAll'), count: all.length },
+    { key: 'unread' as const, l: t('notifsList.tabUnread'), count: unreadCount },
   ];
 
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader
-        title="Notifications"
+        title={t('notifsList.title')}
         onBack={() => navigation.goBack()}
         rightAction={
           unreadCount > 0 ? (
             <Pressable onPress={onMarkAllRead}>
-              <Text style={styles.markRead}>Tout marquer lu</Text>
+              <Text style={styles.markRead}>{t('notifsList.markAllRead')}</Text>
             </Pressable>
           ) : undefined
         }
@@ -138,26 +147,24 @@ export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifi
         }
       >
         {query.isLoading && (
-          <Text style={styles.empty}>Chargement…</Text>
+          <Text style={styles.empty}>{t('common.loading')}</Text>
         )}
 
         {!query.isLoading && groups.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyEmoji}>🔕</Text>
             <Text style={styles.emptyTitle}>
-              {tab === 'unread' ? 'Aucune notif non lue' : 'Aucune notification'}
+              {tab === 'unread' ? t('notifsList.emptyTitleUnread') : t('notifsList.emptyTitleAll')}
             </Text>
             <Text style={styles.emptySub}>
-              {tab === 'unread'
-                ? 'Tu es à jour 🎉'
-                : 'Tes notifications apparaîtront ici dès qu\'il y aura de l\'activité.'}
+              {tab === 'unread' ? t('notifsList.emptyBodyUnread') : t('notifsList.emptyBodyAll')}
             </Text>
           </View>
         )}
 
         {groups.map((g) => (
           <View key={g.day} style={{ marginBottom: 18 }}>
-            <Text style={styles.dayLabel}>{g.day}</Text>
+            <Text style={styles.dayLabel}>{BUCKET_LABEL[g.day]}</Text>
             <Card pad={0}>
               {g.items.map((n, i) => {
                 const { color, emoji } = styleFor(n);

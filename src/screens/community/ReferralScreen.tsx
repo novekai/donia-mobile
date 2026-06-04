@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { SunRays } from '../../components/deco/SunRays';
@@ -33,9 +34,10 @@ import { getReferral } from '../../api/referral';
 import { getApiErrorMessage } from '../../api/client';
 
 // SMS retiré sur demande Paul (06/2026) — on garde uniquement WhatsApp + Lien copiable.
-const SHARES: { key: 'whatsapp' | 'link'; l: string; bg: string; emoji: string }[] = [
-  { key: 'whatsapp', l: 'WhatsApp', bg: '#25D366', emoji: '💬' },
-  { key: 'link', l: 'Copier le lien', bg: colors.coral, emoji: '🔗' },
+type ShareKey = 'whatsapp' | 'link';
+const SHARES: { key: ShareKey; bg: string; emoji: string }[] = [
+  { key: 'whatsapp', bg: '#25D366', emoji: '💬' },
+  { key: 'link', bg: colors.coral, emoji: '🔗' },
 ];
 
 function referralUrl(code: string): string {
@@ -48,10 +50,12 @@ function formatAmount(n: number): string {
 
 function ShareBtn({
   s,
+  label,
   delay,
   onPress,
 }: {
   s: (typeof SHARES)[number];
+  label: string;
   delay: number;
   onPress: () => void;
 }) {
@@ -60,13 +64,14 @@ function ShareBtn({
     <Animated.View style={[bobStyle, { flex: 1 }]}>
       <Pressable onPress={onPress} style={[styles.share, { backgroundColor: s.bg }]}>
         <Text style={{ fontSize: 24 }}>{s.emoji}</Text>
-        <Text style={styles.shareText}>{s.l}</Text>
+        <Text style={styles.shareText}>{label}</Text>
       </Pressable>
     </Animated.View>
   );
 }
 
 export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>) {
+  const { t } = useTranslation();
   const bobStyle = useBob();
   const referralQuery = useQuery({
     queryKey: ['referral'],
@@ -80,7 +85,7 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
   // coller le code partout (notes, WhatsApp, sms, autres apps).
   async function onCopyCode(code: string) {
     Clipboard.setString(code);
-    Alert.alert('Code copié ✨', `Ton code "${code}" est dans le presse-papier. Tu peux le coller où tu veux.`);
+    Alert.alert(t('referral.codeCopiedTitle'), t('referral.codeCopiedBody', { code }));
   }
 
   async function onShare(channel: 'whatsapp' | 'link', code: string) {
@@ -88,9 +93,8 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
     const url = referralUrl(code);
 
     if (channel === 'link') {
-      // Bouton "Copier le lien" → met le lien complet dans le presse-papier.
       Clipboard.setString(url);
-      Alert.alert('Lien copié 🔗', 'Le lien de parrainage est dans le presse-papier. Colle-le où tu veux.');
+      Alert.alert(t('referral.linkCopiedTitle'), t('referral.linkCopiedBody'));
       return;
     }
 
@@ -116,7 +120,7 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
     return (
       <ScreenContainer>
         <FunBackground palette="cream" />
-        <ScreenHeader title="Inviter des amis" onBack={() => navigation.goBack()} />
+        <ScreenHeader title={t('referral.title')} onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator color={colors.coral} />
         </View>
@@ -128,10 +132,10 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
     return (
       <ScreenContainer>
         <FunBackground palette="cream" />
-        <ScreenHeader title="Inviter des amis" onBack={() => navigation.goBack()} />
+        <ScreenHeader title={t('referral.title')} onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <Text style={{ fontFamily: fonts.displayMedium, fontSize: 17, color: colors.ink, textAlign: 'center' }}>
-            Impossible de charger ton parrainage
+            {t('referral.loadFail')}
           </Text>
           <Text style={{ marginTop: 6, fontSize: 13, color: colors.ink2, textAlign: 'center' }}>
             {getApiErrorMessage(referralQuery.error)}
@@ -174,10 +178,8 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
 
           <View style={{ alignItems: 'center' }}>
             <Animated.Text style={[bobStyle, { fontSize: 38 }]}>🎉</Animated.Text>
-            <Text style={styles.heroTitle}>{ratePct}% à vie</Text>
-            <Text style={styles.heroSub}>
-              Sur chaque envoi de tes filleuls,{'\n'}tant qu'ils utilisent Donia.
-            </Text>
+            <Text style={styles.heroTitle}>{t('referral.tagline', { pct: ratePct })}</Text>
+            <Text style={styles.heroSub}>{t('referral.subTagline')}</Text>
             <KenteStrip height={5} width={'45%'} style={{ marginTop: 16 }} />
           </View>
         </BrandGradient>
@@ -185,33 +187,35 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
         <View style={styles.statsRow}>
           <Card pad={14} style={styles.stat}>
             <Text style={[styles.statValue, { color: colors.coral }]}>{filleulsCount}</Text>
-            <Text style={styles.statLabel}>
-              {filleulsCount > 1 ? 'Filleuls actifs' : 'Filleul actif'}
-            </Text>
+            <Text style={styles.statLabel}>{t('referral.filleulsActive', { count: filleulsCount })}</Text>
           </Card>
           <Card pad={14} style={styles.stat}>
             <Text style={[styles.statValue, { color: colors.mango }]}>{formatAmount(totalEarned)}</Text>
-            <Text style={styles.statLabel}>FCFA gagnés</Text>
+            <Text style={styles.statLabel}>{t('referral.fcfaEarned')}</Text>
           </Card>
         </View>
 
-        <Text style={styles.label}>Ton code de parrainage</Text>
+        <Text style={styles.label}>{t('referral.yourCode')}</Text>
         <View style={styles.codeBox}>
           <Text style={styles.code}>{code}</Text>
           <Pressable style={styles.copy} onPress={() => onCopyCode(code)}>
-            <Text style={styles.copyText}>Copier</Text>
+            <Text style={styles.copyText}>{t('common.copy')}</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.label}>Partager mon parrainage</Text>
+        <Text style={styles.label}>{t('referral.shareLabel')}</Text>
         <View style={styles.sharesRow}>
           {SHARES.map((s, i) => (
-            <ShareBtn key={s.key} s={s} delay={i * 0.3} onPress={() => onShare(s.key, code)} />
+            <ShareBtn
+              key={s.key}
+              s={s}
+              label={s.key === 'whatsapp' ? t('referral.shareWhatsApp') : t('referral.shareLink')}
+              delay={i * 0.3}
+              onPress={() => onShare(s.key, code)}
+            />
           ))}
         </View>
-        <Text style={styles.shareHint}>
-          Tape sur WhatsApp pour ouvrir ton WhatsApp et choisir à qui envoyer ton lien.
-        </Text>
+        <Text style={styles.shareHint}>{t('referral.shareHint')}</Text>
       </ScrollView>
     </ScreenContainer>
   );

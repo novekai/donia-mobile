@@ -1,8 +1,8 @@
-// Language — sélecteur FR/EN. Sauvegarde la préférence côté backend (preferredLanguage).
-// NOTE V1 : la traduction effective des chaînes (i18n complet) arrive en V1.1.
-// Pour l'instant on ne fait que persister le choix.
+// Language — sélecteur FR/EN. Bascule l'app immédiatement via i18n.changeLanguage()
+// + persiste dans AsyncStorage + synchronise vers backend (preferredLanguage).
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
@@ -13,35 +13,42 @@ import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { getMe, updateMe } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
+import { changeLanguage, localLangToBackend, type Lang } from '../../i18n';
 
-type Lang = { code: 'fr-FR' | 'en-US'; label: string; native: string; flag: string };
+type LangOption = { code: Lang; label: string; native: string; flag: string };
 
-const LANGS: Lang[] = [
-  { code: 'fr-FR', label: 'Français', native: 'Français (France)', flag: '🇫🇷' },
-  { code: 'en-US', label: 'English', native: 'English (United States)', flag: '🇺🇸' },
+const LANGS: LangOption[] = [
+  { code: 'fr', label: 'Français', native: 'Français (France)', flag: '🇫🇷' },
+  { code: 'en', label: 'English', native: 'English (United States)', flag: '🇺🇸' },
 ];
 
 export function LanguageScreen({ navigation }: RootStackScreenProps<'Language'>) {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const [busy, setBusy] = React.useState<string | null>(null);
 
-  const current = meQuery.data?.user.preferredLanguage ?? 'fr-FR';
+  const current = (i18n.language === 'en' ? 'en' : 'fr') as Lang;
 
-  async function pick(code: Lang['code']) {
+  async function pick(code: Lang) {
     if (busy || code === current) return;
     setBusy(code);
     try {
-      await updateMe({ preferredLanguage: code } as Record<string, string>);
-      await queryClient.invalidateQueries({ queryKey: ['me'] });
+      // 1. Change la langue de l'UI immédiatement (re-render tous les useTranslation)
+      await changeLanguage(code);
+      // 2. Persiste vers le backend (best-effort — n'empêche pas l'UI de switcher)
+      try {
+        await updateMe({ preferredLanguage: localLangToBackend(code) } as Record<string, string>);
+        await queryClient.invalidateQueries({ queryKey: ['me'] });
+      } catch {
+        // silencieux — la langue est déjà appliquée localement
+      }
       Alert.alert(
-        code === 'fr-FR' ? 'Français activé 🇫🇷' : 'English enabled 🇺🇸',
-        code === 'fr-FR'
-          ? "La traduction complète de l'app sera disponible dans une prochaine version. Ta préférence est enregistrée."
-          : 'Full app translation is coming in a future update. Your preference has been saved.',
+        code === 'fr' ? t('language.appliedTitleFR') : t('language.appliedTitleEN'),
+        code === 'fr' ? t('language.appliedBodyFR') : t('language.appliedBodyEN'),
       );
     } catch (e) {
-      Alert.alert('Erreur', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setBusy(null);
     }
@@ -50,12 +57,10 @@ export function LanguageScreen({ navigation }: RootStackScreenProps<'Language'>)
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Langue & région 🌍" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('language.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 }}>
-        <Text style={styles.intro}>
-          Choisis la langue dans laquelle tu veux utiliser Donia. Les emails, les notifications et l'interface s'adapteront à ton choix.
-        </Text>
+        <Text style={styles.intro}>{t('language.intro')}</Text>
 
         {meQuery.isLoading && (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
@@ -63,37 +68,33 @@ export function LanguageScreen({ navigation }: RootStackScreenProps<'Language'>)
           </View>
         )}
 
-        {meQuery.data && (
-          <Card pad={0}>
-            {LANGS.map((l, i) => {
-              const selected = current === l.code;
-              const isBusy = busy === l.code;
-              return (
-                <Pressable
-                  key={l.code}
-                  onPress={() => pick(l.code)}
-                  disabled={isBusy}
-                  style={[styles.row, i < LANGS.length - 1 && styles.rowDivider, selected && styles.rowSelected]}
-                >
-                  <Text style={styles.flag}>{l.flag}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.label, selected && { color: colors.coralDeep }]}>{l.label}</Text>
-                    <Text style={styles.sub}>{l.native}</Text>
-                  </View>
-                  {isBusy ? (
-                    <ActivityIndicator color={colors.coral} size="small" />
-                  ) : selected ? (
-                    <View style={styles.check}><Text style={styles.checkText}>✓</Text></View>
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </Card>
-        )}
+        <Card pad={0}>
+          {LANGS.map((l, i) => {
+            const selected = current === l.code;
+            const isBusy = busy === l.code;
+            return (
+              <Pressable
+                key={l.code}
+                onPress={() => pick(l.code)}
+                disabled={isBusy}
+                style={[styles.row, i < LANGS.length - 1 && styles.rowDivider, selected && styles.rowSelected]}
+              >
+                <Text style={styles.flag}>{l.flag}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.label, selected && { color: colors.coralDeep }]}>{l.label}</Text>
+                  <Text style={styles.sub}>{l.native}</Text>
+                </View>
+                {isBusy ? (
+                  <ActivityIndicator color={colors.coral} size="small" />
+                ) : selected ? (
+                  <View style={styles.check}><Text style={styles.checkText}>✓</Text></View>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </Card>
 
-        <Text style={styles.footnote}>
-          La traduction complète de l'interface arrive en V1.1. Ta préférence est sauvegardée et sera appliquée automatiquement dès qu'elle sera disponible.
-        </Text>
+        <Text style={styles.footnote}>{t('language.footnote')}</Text>
       </ScrollView>
     </ScreenContainer>
   );

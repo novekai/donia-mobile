@@ -3,6 +3,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl, Share, Alert, Clipboard, Linking } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -34,6 +35,7 @@ function colorFor(id: string): string {
 }
 
 export function AnonymesLinkMessagesScreen({ navigation, route }: RootStackScreenProps<'AnonymesLinkMessages'>) {
+  const { t } = useTranslation();
   const { linkId, code, prompt } = route.params;
   const queryClient = useQueryClient();
 
@@ -47,7 +49,7 @@ export function AnonymesLinkMessagesScreen({ navigation, route }: RootStackScree
 
   async function onCopy() {
     Clipboard.setString(url);
-    Alert.alert('Copié ✨', url);
+    Alert.alert(t('referral.linkCopiedTitle'), url);
   }
 
   async function onShare() {
@@ -80,16 +82,16 @@ export function AnonymesLinkMessagesScreen({ navigation, route }: RootStackScree
         }
       >
         <BrandGradient variant="indigo" style={[styles.headerCard, shadow.indigo]}>
-          <Text style={styles.headerLabel}>LIEN ANONYME</Text>
+          <Text style={styles.headerLabel}>{t('anonymes.linkLabel')}</Text>
           <Text style={styles.headerUrl}>
             doniia.com/a/<Text style={{ color: colors.mango }}>{code}</Text>
           </Text>
           <View style={styles.headerActions}>
             <Pressable onPress={onCopy} style={[styles.headerBtn, { backgroundColor: 'rgba(253,247,246,0.14)' }]}>
-              <Text style={styles.headerBtnText}>📋 Copier</Text>
+              <Text style={styles.headerBtnText}>📋 {t('common.copy')}</Text>
             </Pressable>
             <Pressable onPress={onShare} style={[styles.headerBtn, { backgroundColor: colors.mango }]}>
-              <Text style={[styles.headerBtnText, { color: colors.indigoDeep }]}>💬 Partager</Text>
+              <Text style={[styles.headerBtnText, { color: colors.indigoDeep }]}>💬 {t('common.share')}</Text>
             </Pressable>
             <Pressable
               onPress={() => navigation.navigate('AnonymesLink', { code })}
@@ -101,19 +103,17 @@ export function AnonymesLinkMessagesScreen({ navigation, route }: RootStackScree
         </BrandGradient>
 
         <View style={styles.msgsHead}>
-          <Text style={styles.msgsTitle}>Messages reçus</Text>
+          <Text style={styles.msgsTitle}>{t('anonymes.msgsTitle')}</Text>
           <Text style={styles.msgsCount}>
-            {messages.length === 0 ? 'aucun pour l\'instant' : `${messages.length} au total`}
+            {messages.length === 0 ? t('anonymes.msgsNoneShort') : t('anonymes.msgsCount', { count: messages.length })}
           </Text>
         </View>
 
         {messages.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyEmoji}>💌</Text>
-            <Text style={styles.emptyTitle}>Aucun message sur ce lien</Text>
-            <Text style={styles.emptySub}>
-              Partage ton lien sur tes stories — quand quelqu'un t'écrit, ça apparaîtra ici.
-            </Text>
+            <Text style={styles.emptyTitle}>{t('anonymes.msgsEmptyTitle')}</Text>
+            <Text style={styles.emptySub}>{t('anonymes.msgsEmptyBody')}</Text>
           </View>
         ) : (
           <View style={{ gap: 9 }}>
@@ -129,7 +129,7 @@ export function AnonymesLinkMessagesScreen({ navigation, route }: RootStackScree
                   <View style={styles.msgHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                       <IconAnonyme size={13} color={c} />
-                      <Text style={[styles.msgTagAnon, { color: c }]}>ANONYME</Text>
+                      <Text style={[styles.msgTagAnon, { color: c }]}>{t('anonymes.anonTag')}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       {m.isFavorite && <Text style={styles.msgFav}>❤</Text>}

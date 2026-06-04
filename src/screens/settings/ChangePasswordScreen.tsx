@@ -3,6 +3,7 @@
 // Différent du flow ForgotPassword (qui passe par WhatsApp/Email + code).
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -16,6 +17,7 @@ import { changePassword } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 
 export function ChangePasswordScreen({ navigation }: RootStackScreenProps<'ChangePassword'>) {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -32,12 +34,12 @@ export function ChangePasswordScreen({ navigation }: RootStackScreenProps<'Chang
     try {
       await changePassword(current, next);
       Alert.alert(
-        'Mot de passe changé 🎉',
-        'Tu peux maintenant te reconnecter avec ton nouveau mot de passe.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }],
+        t('changePassword.successTitle'),
+        t('changePassword.successBody'),
+        [{ text: t('common.ok'), onPress: () => navigation.goBack() }],
       );
     } catch (e) {
-      Alert.alert('Échec', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -46,69 +48,60 @@ export function ChangePasswordScreen({ navigation }: RootStackScreenProps<'Chang
   return (
     <ScreenContainer avoidKeyboard>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Changer mon mot de passe 🔑" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('changePassword.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.intro}>
-          Pour changer ton mot de passe, on a besoin de ton mot de passe actuel pour vérifier que c'est bien toi.
-        </Text>
+        <Text style={styles.intro}>{t('changePassword.intro')}</Text>
 
         <View style={{ marginTop: spacing.md }} />
         <PasswordInput
-          label="Mot de passe actuel"
+          label={t('changePassword.current')}
           value={current}
           onChangeText={setCurrent}
         />
 
         <View style={{ marginTop: spacing.sm }} />
         <PasswordInput
-          label="Nouveau mot de passe"
+          label={t('changePassword.next')}
           value={next}
           onChangeText={setNext}
         />
-        {tooShort && (
-          <Text style={styles.helperError}>Min. 8 caractères.</Text>
-        )}
-        {sameAsOld && (
-          <Text style={styles.helperError}>Le nouveau mot de passe doit être différent de l'ancien.</Text>
-        )}
+        {tooShort && <Text style={styles.helperError}>{t('changePassword.tooShort')}</Text>}
+        {sameAsOld && <Text style={styles.helperError}>{t('changePassword.sameAsOld')}</Text>}
 
         <View style={{ marginTop: spacing.sm }} />
         <PasswordInput
-          label="Confirmer le nouveau mot de passe"
+          label={t('changePassword.confirm')}
           value={confirm}
           onChangeText={setConfirm}
         />
         {next.length >= 8 && confirm.length > 0 && next !== confirm && (
-          <Text style={styles.helperError}>Les mots de passe ne correspondent pas.</Text>
+          <Text style={styles.helperError}>{t('changePassword.mismatch')}</Text>
         )}
         {matches && !sameAsOld && (
           <View style={styles.helperOk}>
             <View style={styles.checkBubble}>
               <IconCheck size={11} color={colors.bg} strokeWidth={3.5} />
             </View>
-            <Text style={styles.helperOkText}>Mots de passe identiques</Text>
+            <Text style={styles.helperOkText}>{t('changePassword.match')}</Text>
           </View>
         )}
 
         <View style={{ marginTop: spacing.lg }} />
         <Button
-          label={loading ? 'Mise à jour…' : 'Changer mon mot de passe'}
+          label={loading ? t('changePassword.submitBusy') : t('changePassword.submit')}
           pulse
           disabled={!canSubmit || loading}
           onPress={onSubmit}
         />
 
         <Text style={styles.forgotHint}>
-          Mot de passe oublié ?{' '}
-          <Text
-            style={styles.forgotLink}
-            onPress={() => navigation.replace('ForgotPassword')}
-          >
-            Réinitialiser via WhatsApp / email
+          {t('changePassword.forgotHint')}{' '}
+          <Text style={styles.forgotLink} onPress={() => navigation.replace('ForgotPassword')}>
+            {t('changePassword.forgotLink')}
           </Text>
         </Text>
       </ScrollView>

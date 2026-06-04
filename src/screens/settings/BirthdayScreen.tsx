@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -13,6 +14,7 @@ import { getMe, updateMe } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 
 export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>) {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const [busy, setBusy] = React.useState<string | null>(null);
@@ -28,7 +30,7 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
       await updateMe({ [key]: next } as Record<string, boolean>);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
     } catch (e) {
-      Alert.alert('Erreur', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setBusy(null);
     }
@@ -37,7 +39,7 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Anniversaire 🎂" onBack={() => navigation.goBack()} />
+      <ScreenHeader title={t('birthday.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 }}>
         {meQuery.isLoading && (
@@ -49,9 +51,7 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
         {meQuery.data && (
           <>
             <Card>
-              <Text style={styles.intro}>
-                Donia peut te rappeler les anniversaires de tes proches et leur souhaiter pour toi avec une carte cadeau prête à envoyer. Tu peux activer ou désactiver cette fonctionnalité à tout moment.
-              </Text>
+              <Text style={styles.intro}>{t('birthday.intro')}</Text>
             </Card>
 
             <Pressable onPress={() => toggle('birthdayOptIn', !optIn)} disabled={busy === 'birthdayOptIn'} style={{ marginTop: 14 }}>
@@ -59,8 +59,8 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
                 <View style={styles.row}>
                   <View style={styles.iconBox}><Text style={{ fontSize: 22 }}>🎉</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Notifications d'anniversaire</Text>
-                    <Text style={styles.sub}>Reçois un rappel 3 jours avant l'anniversaire de tes destinataires</Text>
+                    <Text style={styles.label}>{t('birthday.notifsLabel')}</Text>
+                    <Text style={styles.sub}>{t('birthday.notifsSub')}</Text>
                   </View>
                   <View style={[styles.toggle, optIn && { backgroundColor: colors.coral }]}>
                     <View style={[styles.toggleDot, { left: optIn ? 22 : 2 }]} />
@@ -74,10 +74,8 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
                 <View style={styles.row}>
                   <View style={styles.iconBox}><Text style={{ fontSize: 22 }}>🎂</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Annoncer mon anniversaire</Text>
-                    <Text style={styles.sub}>
-                      Le jour J, "C'est mon anniv 🎉" apparaît sur ton profil — tes proches peuvent t'envoyer des cartes spontanément
-                    </Text>
+                    <Text style={styles.label}>{t('birthday.publicLabel')}</Text>
+                    <Text style={styles.sub}>{t('birthday.publicSub')}</Text>
                   </View>
                   <View style={[styles.toggle, pub && { backgroundColor: colors.coral }]}>
                     <View style={[styles.toggleDot, { left: pub ? 22 : 2 }]} />
@@ -87,19 +85,17 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
             </Pressable>
 
             <View style={styles.dobCard}>
-              <Text style={styles.dobLabel}>Ta date de naissance</Text>
+              <Text style={styles.dobLabel}>{t('birthday.dobLabel')}</Text>
               {dob ? (
                 <Text style={styles.dobValue}>
-                  {new Date(dob).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(dob).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </Text>
               ) : (
                 <Pressable onPress={() => navigation.navigate('MyInfo')}>
-                  <Text style={[styles.dobValue, { color: colors.coralDeep }]}>Ajouter ma date de naissance →</Text>
+                  <Text style={[styles.dobValue, { color: colors.coralDeep }]}>{t('birthday.dobAdd')}</Text>
                 </Pressable>
               )}
-              <Text style={styles.dobHint}>
-                Tes proches sur Donia recevront un rappel pour ton anniversaire et pourront t'envoyer une carte facilement.
-              </Text>
+              <Text style={styles.dobHint}>{t('birthday.dobHint')}</Text>
             </View>
           </>
         )}

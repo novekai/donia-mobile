@@ -3,6 +3,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
@@ -36,6 +37,7 @@ function shortenUA(ua: string | null): { os: string; emoji: string } {
 }
 
 function SessionRow({ s, onRevoke, busy, variant }: { s: ActiveSession; onRevoke: (id: string) => void; busy: boolean; variant: Variant }) {
+  const { t } = useTranslation();
   const { os, emoji } = shortenUA(s.userAgent);
   return (
     <View style={styles.row}>
@@ -45,16 +47,18 @@ function SessionRow({ s, onRevoke, busy, variant }: { s: ActiveSession; onRevoke
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text style={styles.label}>{os}</Text>
-          {s.isCurrent && <View style={styles.badge}><Text style={styles.badgeText}>CET APPAREIL</Text></View>}
+          {s.isCurrent && <View style={styles.badge}><Text style={styles.badgeText}>{t('sessions.currentBadge')}</Text></View>}
         </View>
         <Text style={styles.sub}>
-          {variant === 'sessions' ? `Connecté le ${formatDate(s.createdAt)}` : `Active depuis ${formatDate(s.createdAt)}`}
+          {variant === 'sessions'
+            ? t('sessions.connectedAt', { when: formatDate(s.createdAt) })
+            : t('sessions.activeSince', { when: formatDate(s.createdAt) })}
         </Text>
         {s.ip && <Text style={styles.subDim}>IP {s.ip}</Text>}
       </View>
       {!s.isCurrent && (
         <Pressable disabled={busy} onPress={() => onRevoke(s.id)} style={[styles.revokeBtn, busy && { opacity: 0.5 }]}>
-          <Text style={styles.revokeText}>Révoquer</Text>
+          <Text style={styles.revokeText}>{t('sessions.revoke')}</Text>
         </Pressable>
       )}
     </View>
@@ -62,6 +66,7 @@ function SessionRow({ s, onRevoke, busy, variant }: { s: ActiveSession; onRevoke
 }
 
 export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sessions'>) {
+  const { t } = useTranslation();
   const variant: Variant = route.params?.variant ?? 'sessions';
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['me', 'sessions'], queryFn: listSessions });
@@ -75,7 +80,7 @@ export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sess
       await revokeSession(id);
       await queryClient.invalidateQueries({ queryKey: ['me', 'sessions'] });
     } catch (e) {
-      Alert.alert('Révocation échouée', getApiErrorMessage(e));
+      Alert.alert(t('common.error'), getApiErrorMessage(e));
     } finally {
       setBusyId(null);
     }
@@ -84,21 +89,21 @@ export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sess
   function onRevokeAll() {
     if (revokingAll) return;
     Alert.alert(
-      'Déconnecter tous les autres appareils ?',
-      'Tu resteras connecté·e ici, mais les autres appareils seront déconnectés immédiatement.',
+      t('sessions.confirmTitle'),
+      t('sessions.confirmBody'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Tout déconnecter',
+          text: t('sessions.confirmBtn'),
           style: 'destructive',
           onPress: async () => {
             setRevokingAll(true);
             try {
               const res = await revokeAllOtherSessions();
-              Alert.alert('Sessions révoquées', `${res.revoked} session${res.revoked > 1 ? 's' : ''} déconnectée${res.revoked > 1 ? 's' : ''}.`);
+              Alert.alert(t('sessions.revokedTitle'), t('sessions.revokedBody', { count: res.revoked }));
               await queryClient.invalidateQueries({ queryKey: ['me', 'sessions'] });
             } catch (e) {
-              Alert.alert('Échec', getApiErrorMessage(e));
+              Alert.alert(t('common.error'), getApiErrorMessage(e));
             } finally {
               setRevokingAll(false);
             }
@@ -114,7 +119,7 @@ export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sess
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title={variant === 'sessions' ? 'Sessions récentes 🕐' : 'Appareils connectés 📱'} onBack={() => navigation.goBack()} />
+      <ScreenHeader title={variant === 'sessions' ? t('sessions.titleSessions') : t('sessions.titleDevices')} onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 16, paddingBottom: 40 }}>
         {query.isLoading && (
@@ -123,10 +128,10 @@ export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sess
           </View>
         )}
         {query.isError && (
-          <Text style={styles.errorText}>Impossible de charger {variant === 'sessions' ? 'les sessions' : 'les appareils'}.</Text>
+          <Text style={styles.errorText}>{t('sessions.loadFail')}</Text>
         )}
         {!query.isLoading && sessions.length === 0 && (
-          <Text style={styles.emptyText}>Aucune session active.</Text>
+          <Text style={styles.emptyText}>{t('sessions.empty')}</Text>
         )}
 
         {sessions.length > 0 && (
@@ -142,7 +147,7 @@ export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sess
         {others.length > 0 && (
           <Pressable onPress={onRevokeAll} disabled={revokingAll} style={[styles.revokeAllBtn, revokingAll && { opacity: 0.5 }]}>
             <Text style={styles.revokeAllText}>
-              {revokingAll ? 'Déconnexion…' : `Déconnecter ${others.length} autre${others.length > 1 ? 's' : ''} appareil${others.length > 1 ? 's' : ''}`}
+              {revokingAll ? t('sessions.revokingAll') : t('sessions.revokeAll', { count: others.length })}
             </Text>
           </Pressable>
         )}

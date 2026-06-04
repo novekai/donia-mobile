@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { Sparkle } from '../../components/deco/Sparkle';
@@ -16,21 +17,22 @@ import { listTransactions } from '../../api/transactions';
 import type { Transaction, TxType, TxStatus } from '../../api/types';
 
 // Petit badge inline pour distinguer les transactions PENDING/FAILED/REFUNDED des SUCCESS.
-// SUCCESS n'affiche pas de badge (état nominal).
-const STATUS_BADGE: Partial<Record<TxStatus, { label: string; bg: string; fg: string }>> = {
-  PENDING: { label: 'En attente', bg: 'rgba(255,199,0,0.18)', fg: '#8a6800' },
-  FAILED: { label: 'Échec', bg: 'rgba(214,46,85,0.14)', fg: colors.coralDeep },
-  REFUNDED: { label: 'Remboursé', bg: 'rgba(92,138,69,0.15)', fg: colors.green },
+// Le label est traduit dans le composant via t() — ici on garde juste les couleurs.
+const STATUS_STYLE: Partial<Record<TxStatus, { bg: string; fg: string }>> = {
+  PENDING: { bg: 'rgba(255,199,0,0.18)', fg: '#8a6800' },
+  FAILED: { bg: 'rgba(214,46,85,0.14)', fg: colors.coralDeep },
+  REFUNDED: { bg: 'rgba(92,138,69,0.15)', fg: colors.green },
 };
 
-const FILTERS = [
-  { l: 'Tout', type: undefined },
-  { l: 'Envoyés', type: 'SEND' as TxType },
-  { l: 'Reçus', type: 'RECEIVE' as TxType },
-  { l: 'Recharges', type: undefined, isTopup: true },
-] as const;
+type FilterKey = 'all' | 'sent' | 'received' | 'topups';
+const FILTERS: { key: FilterKey; type?: TxType; isTopup?: boolean }[] = [
+  { key: 'all', type: undefined },
+  { key: 'sent', type: 'SEND' },
+  { key: 'received', type: 'RECEIVE' },
+  { key: 'topups', type: undefined, isTopup: true },
+];
 
-type FilterItem = typeof FILTERS[number];
+type FilterItem = (typeof FILTERS)[number];
 
 const TX_META: Record<TxType, { initial: string; emoji: string; color: string; whoPrefix: string; neg: boolean }> = {
   SEND:               { initial: 'E', emoji: '✉️', color: colors.coral, whoPrefix: 'Envoi',         neg: true },
@@ -59,11 +61,26 @@ function dayGroupLabel(d: Date): string {
 }
 
 export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
+  const { t } = useTranslation();
   const [filterIdx, setFilterIdx] = useState(0);
   const filter = FILTERS[filterIdx] as FilterItem;
 
+  const FILTER_LABELS: Record<FilterKey, string> = {
+    all: t('history.filterAll'),
+    sent: t('history.filterSent'),
+    received: t('history.filterReceived'),
+    topups: t('history.filterTopups'),
+  };
+
+  const STATUS_LABELS: Record<TxStatus, string | null> = {
+    SUCCESS: null,
+    PENDING: t('history.statusPending'),
+    FAILED: t('history.statusFailed'),
+    REFUNDED: t('history.statusRefunded'),
+  };
+
   const txQuery = useQuery({
-    queryKey: ['transactions', filter.l],
+    queryKey: ['transactions', filter.key],
     queryFn: () => listTransactions({ type: filter.type, limit: 50 }),
   });
 
@@ -87,9 +104,9 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
     return { sent, received };
   }, [items]);
 
-  // Filter for "Recharges" view (combines TOPUP types)
+  // Filter for "topups" view (combines TOPUP types)
   const filteredItems = useMemo(() => {
-    if (filter.l === 'Recharges') return items.filter((t) => t.type === 'TOPUP_MOBILE_MONEY' || t.type === 'TOPUP_CODE');
+    if (filter.key === 'topups') return items.filter((tx) => tx.type === 'TOPUP_MOBILE_MONEY' || tx.type === 'TOPUP_CODE');
     return items;
   }, [items, filter]);
 
@@ -108,7 +125,7 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
   return (
     <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
-      <ScreenHeader title="Historique" hideBack rightAction={<HeaderAvatar />} />
+      <ScreenHeader title={t('history.title')} hideBack rightAction={<HeaderAvatar />} />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 140 }}
@@ -120,11 +137,11 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
             const on = i === filterIdx;
             return (
               <Pressable
-                key={f.l}
+                key={f.key}
                 onPress={() => setFilterIdx(i)}
                 style={[styles.chip, on && { backgroundColor: colors.coral }]}
               >
-                <Text style={[styles.chipText, on && { color: colors.bg }]}>{f.l}</Text>
+                <Text style={[styles.chipText, on && { color: colors.bg }]}>{FILTER_LABELS[f.key]}</Text>
               </Pressable>
             );
           })}
@@ -136,12 +153,12 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
             <Sparkle size={14} color={colors.mango} style={{ position: 'absolute', top: 10, right: 14 }} />
             <View style={styles.summaryRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.summaryLabel}>Envoyé ce mois</Text>
+                <Text style={styles.summaryLabel}>{t('history.sentThisMonth')}</Text>
                 <Text style={styles.summaryValue}>{fmt(monthSummary.sent)} <Text style={styles.summaryUnit}>FCFA</Text></Text>
               </View>
               <View style={styles.summaryDivider} />
               <View style={{ flex: 1, paddingLeft: 14 }}>
-                <Text style={styles.summaryLabel}>Reçu</Text>
+                <Text style={styles.summaryLabel}>{t('history.receivedThisMonth')}</Text>
                 <Text style={[styles.summaryValue, { color: colors.mint }]}>+{fmt(monthSummary.received)} <Text style={styles.summaryUnit}>FCFA</Text></Text>
               </View>
             </View>
@@ -153,7 +170,7 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
           {groups.length === 0 ? (
             <Card pad={20}>
               <Text style={styles.emptyText}>
-                {txQuery.isLoading ? 'Chargement...' : 'Aucune transaction pour l\'instant.\nEnvoie ton premier cadeau ✨'}
+                {txQuery.isLoading ? t('common.loading') : t('history.empty')}
               </Text>
             </Card>
           ) : (
@@ -165,7 +182,8 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
                     const meta = TX_META[t.type];
                     const time = new Date(t.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                     const sign = meta.neg ? '−' : '+';
-                    const statusBadge = STATUS_BADGE[t.status];
+                    const statusStyle = STATUS_STYLE[t.status];
+                    const statusLabel = STATUS_LABELS[t.status];
                     const dim = t.status !== 'SUCCESS';
                     return (
                       <Pressable key={t.id} onPress={() => navigation.navigate('TxDetail', { txId: t.id })}>
@@ -179,9 +197,9 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
                           <View style={{ flex: 1, minWidth: 0 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                               <Text style={[styles.who, dim && { color: colors.ink2 }]}>{meta.whoPrefix}</Text>
-                              {statusBadge && (
-                                <View style={[styles.statusPill, { backgroundColor: statusBadge.bg }]}>
-                                  <Text style={[styles.statusPillText, { color: statusBadge.fg }]}>{statusBadge.label}</Text>
+                              {statusStyle && statusLabel && (
+                                <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
+                                  <Text style={[styles.statusPillText, { color: statusStyle.fg }]}>{statusLabel}</Text>
                                 </View>
                               )}
                             </View>
