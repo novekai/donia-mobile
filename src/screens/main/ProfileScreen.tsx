@@ -31,14 +31,16 @@ function fmtCount(n: number): string {
 export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const refQuery = useQuery({ queryKey: ['referral'], queryFn: getReferral });
+  // On ne compte QUE les envois réellement livrés (SUCCESS) — les paiements en attente
+  // ou échoués ne doivent pas être comptés comme "envoyées" dans le profil.
   const sentQuery = useQuery({
-    queryKey: ['transactions', 'profile-sent'],
-    queryFn: () => listTransactions({ type: 'SEND', limit: 50 }),
+    queryKey: ['transactions', 'profile-sent', 'success'],
+    queryFn: () => listTransactions({ type: 'SEND', status: 'SUCCESS', limit: 50 }),
     select: (d) => d.items.length,
   });
   const receivedQuery = useQuery({
-    queryKey: ['transactions', 'profile-received'],
-    queryFn: () => listTransactions({ type: 'RECEIVE', limit: 50 }),
+    queryKey: ['transactions', 'profile-received', 'success'],
+    queryFn: () => listTransactions({ type: 'RECEIVE', status: 'SUCCESS', limit: 50 }),
     select: (d) => d.items.length,
   });
 

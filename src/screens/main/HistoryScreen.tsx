@@ -13,7 +13,15 @@ import { colors, radius, spacing } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { MainTabScreenProps } from '../../navigation/types';
 import { listTransactions } from '../../api/transactions';
-import type { Transaction, TxType } from '../../api/types';
+import type { Transaction, TxType, TxStatus } from '../../api/types';
+
+// Petit badge inline pour distinguer les transactions PENDING/FAILED/REFUNDED des SUCCESS.
+// SUCCESS n'affiche pas de badge (état nominal).
+const STATUS_BADGE: Partial<Record<TxStatus, { label: string; bg: string; fg: string }>> = {
+  PENDING: { label: 'En attente', bg: 'rgba(255,199,0,0.18)', fg: '#8a6800' },
+  FAILED: { label: 'Échec', bg: 'rgba(214,46,85,0.14)', fg: colors.coralDeep },
+  REFUNDED: { label: 'Remboursé', bg: 'rgba(92,138,69,0.15)', fg: colors.green },
+};
 
 const FILTERS = [
   { l: 'Tout', type: undefined },
@@ -61,13 +69,15 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
 
   const items = txQuery.data?.items ?? [];
 
-  // Compute monthly summary from items
+  // Le sommaire mensuel ne doit refléter QUE les transactions abouties (SUCCESS).
+  // Les paiements en attente ou refusés ne sont pas du vrai cash entrant/sortant.
   const monthSummary = useMemo(() => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     let sent = 0;
     let received = 0;
     for (const tx of items) {
+      if (tx.status !== 'SUCCESS') continue;
       const d = new Date(tx.createdAt);
       if (d < monthStart) continue;
       const amt = Number(tx.amount);
@@ -155,20 +165,36 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
                     const meta = TX_META[t.type];
                     const time = new Date(t.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                     const sign = meta.neg ? '−' : '+';
+                    const statusBadge = STATUS_BADGE[t.status];
+                    const dim = t.status !== 'SUCCESS';
                     return (
                       <Pressable key={t.id} onPress={() => navigation.navigate('TxDetail', { txId: t.id })}>
                         <View style={[styles.row, i < g.items.length - 1 && styles.rowDivider]}>
-                          <View style={[styles.avatar, { backgroundColor: meta.color }]}>
+                          <View style={[styles.avatar, { backgroundColor: meta.color }, dim && { opacity: 0.55 }]}>
                             <Text style={styles.avatarText}>{meta.initial}</Text>
                             <View style={styles.avatarBadge}>
                               <Text style={{ fontSize: 10 }}>{meta.emoji}</Text>
                             </View>
                           </View>
                           <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text style={styles.who}>{meta.whoPrefix}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <Text style={[styles.who, dim && { color: colors.ink2 }]}>{meta.whoPrefix}</Text>
+                              {statusBadge && (
+                                <View style={[styles.statusPill, { backgroundColor: statusBadge.bg }]}>
+                                  <Text style={[styles.statusPillText, { color: statusBadge.fg }]}>{statusBadge.label}</Text>
+                                </View>
+                              )}
+                            </View>
                             <Text style={styles.note}>{time}</Text>
                           </View>
-                          <Text style={[styles.amt, { color: meta.neg ? colors.ink : colors.green }]}>
+                          <Text
+                            style={[
+                              styles.amt,
+                              { color: meta.neg ? colors.ink : colors.green },
+                              t.status === 'FAILED' && { color: colors.ink3, textDecorationLine: 'line-through' },
+                              t.status === 'PENDING' && { color: colors.ink3 },
+                            ]}
+                          >
                             {sign}{fmt(t.amount)}
                           </Text>
                         </View>
@@ -204,5 +230,7 @@ const styles = StyleSheet.create({
   who: { fontFamily: fonts.displaySemiBold, fontSize: 14, color: colors.ink },
   note: { fontSize: 11, color: colors.ink3 },
   amt: { fontFamily: fonts.bodyBold, fontSize: 14 },
+  statusPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  statusPillText: { fontFamily: fonts.bodyBold, fontSize: 9.5, letterSpacing: 0.4, textTransform: 'uppercase' },
   emptyText: { fontFamily: fonts.displayItalic, fontSize: 13, color: colors.ink3, textAlign: 'center', padding: 8, lineHeight: 20 },
 });
