@@ -51,10 +51,11 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
     setLoading(true);
     try {
       const phoneE164 = toE164(country, localPhone);
+      const whatsappE164 = waSame ? phoneE164 : toE164(waCountry, waLocal);
       const res = await authApi.signup({
         name: name.trim(),
         phone: phoneE164,
-        whatsapp: waSame ? phoneE164 : toE164(waCountry, waLocal),
+        whatsapp: whatsappE164,
         email: email.trim() || undefined,
         password: pw,
         sex: sex === 'F' ? 'F' : sex === 'H' ? 'M' : 'OTHER',
@@ -62,7 +63,8 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
         dob: dobDay && dobMonth && dobYear ? `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}` : undefined,
       });
       signIn(res);
-      navigation.navigate('OTP', { phone: phoneE164 });
+      // L'OTP WhatsApp doit partir sur le numéro WhatsApp (qui peut être ≠ téléphone principal).
+      navigation.navigate('OTP', { phone: phoneE164, whatsapp: whatsappE164, email: email.trim() || undefined });
     } catch (e) {
       Alert.alert('Inscription échouée', getApiErrorMessage(e));
     } finally {

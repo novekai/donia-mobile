@@ -60,6 +60,12 @@ export type ActiveSession = {
   isCurrent: boolean;
 };
 
+// Change password — requiert le mot de passe actuel. Différent de la réinitialisation
+// (qui passe par /auth/reset-password avec un OTP, pour les utilisateurs qui ont oublié).
+export function changePassword(currentPassword: string, newPassword: string): Promise<{ ok: true }> {
+  return apiPost<{ ok: true }>('/v1/me/password', { currentPassword, newPassword });
+}
+
 export function listSessions(): Promise<{ sessions: ActiveSession[] }> {
   return apiGet<{ sessions: ActiveSession[] }>('/v1/me/sessions');
 }

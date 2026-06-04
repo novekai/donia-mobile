@@ -23,7 +23,7 @@ type Row = { label: string; sub: string; emoji: string; color: string } & ({ kin
 //   les permissions biométriques juste pour un toggle décoratif.
 // - Appareils / Sessions : chev placeholder, écrans à venir V1.1.
 const ROWS: Row[] = [
-  { kind: 'chev', label: 'Mot de passe', sub: 'Réinitialiser via WhatsApp ou email', emoji: '🔑', color: colors.mango },
+  { kind: 'chev', label: 'Mot de passe', sub: 'Changer mon mot de passe', emoji: '🔑', color: colors.mango },
   { kind: 'toggle', key: '2fa', label: 'Authentification 2FA', sub: 'Code par email à chaque connexion', emoji: '🛡️', color: colors.mint },
   { kind: 'chev', label: 'Appareils connectés', sub: 'Voir mes appareils', emoji: '📱', color: colors.indigo },
   { kind: 'chev', label: 'Sessions récentes', sub: 'Historique de connexions', emoji: '🕐', color: colors.plum },
@@ -89,7 +89,7 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
           const onPressRow = () => {
             if (r.kind === 'toggle') return;
             if (r.label === 'Mot de passe') {
-              navigation.navigate('ForgotPassword');
+              navigation.navigate('ChangePassword');
             } else if (r.label === 'Appareils connectés') {
               navigation.navigate('Sessions', { variant: 'devices' });
             } else if (r.label === 'Sessions récentes') {

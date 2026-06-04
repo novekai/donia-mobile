@@ -126,10 +126,11 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
         return;
       }
       const picker = source === 'camera' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
+      // Pas de allowsEditing — l'éditeur natif Android (bouton REDIMENSIONNER) crash sur
+      // certains devices (MIUI, plusieurs Xiaomi). On laisse le backend faire un
+      // center-crop carré 512×512 dans uploadAvatar (sharp resize cover/centre).
       const result = await picker({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
         quality: 0.9,
       });
       if (result.canceled || !result.assets[0]) return;

@@ -72,7 +72,15 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="Continuer" pulse onPress={() => navigation.goBack()} />
+        <Button
+          label="Continuer"
+          pulse
+          onPress={() =>
+            navigation.navigate('KYCUpload', {
+              docType: doc === 'cni' ? 'CNI' : doc === 'passport' ? 'PASSPORT' : 'PERMIS',
+            })
+          }
+        />
       </View>
     </ScreenContainer>
   );

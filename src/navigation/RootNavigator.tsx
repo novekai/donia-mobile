@@ -64,6 +64,8 @@ import { SessionsScreen } from '../screens/settings/SessionsScreen';
 import { PrivacyScreen } from '../screens/settings/PrivacyScreen';
 import { BirthdayScreen } from '../screens/settings/BirthdayScreen';
 import { LanguageScreen } from '../screens/settings/LanguageScreen';
+import { ChangePasswordScreen } from '../screens/settings/ChangePasswordScreen';
+import { KYCUploadScreen } from '../screens/settings/KYCUploadScreen';
 
 // Profile + Wallet (V2 : déplacés hors du bottom)
 import { ProfileScreen } from '../screens/main/ProfileScreen';
@@ -142,6 +144,8 @@ export function RootNavigator() {
         <Stack.Screen name="Privacy" component={PrivacyScreen} />
         <Stack.Screen name="Birthday" component={BirthdayScreen} />
         <Stack.Screen name="Language" component={LanguageScreen} />
+        <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Stack.Screen name="KYCUpload" component={KYCUploadScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Wallet" component={WalletScreen} />
 

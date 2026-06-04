@@ -19,12 +19,16 @@ type Channel = 'WHATSAPP' | 'EMAIL';
 
 export function OTPScreen({ navigation, route }: RootStackScreenProps<'OTP'>) {
   const phoneFromRoute = route.params?.phone;
+  const whatsappFromRoute = route.params?.whatsapp;
   const emailFromRoute = route.params?.email;
   const user = useAuthStore((s) => s.user);
+  // Un user a parfois un numéro de téléphone et un numéro WhatsApp distincts.
+  // Le canal WHATSAPP doit utiliser le numéro WhatsApp en priorité.
   const contactPhone = phoneFromRoute ?? user?.phone ?? '';
+  const contactWhatsApp = whatsappFromRoute ?? (user as { whatsapp?: string } | null)?.whatsapp ?? contactPhone;
   const contactEmail = emailFromRoute ?? user?.email ?? '';
 
-  // Le canal Email est prioritaire si l'utilisateur a un email (SMS non supporté, WhatsApp pas encore wiré).
+  // Le canal Email est prioritaire si l'utilisateur a un email (SMS non supporté).
   const initialChannel: Channel = contactEmail ? 'EMAIL' : 'WHATSAPP';
   const [activeChannel, setActiveChannel] = useState<Channel>(initialChannel);
 
@@ -32,10 +36,10 @@ export function OTPScreen({ navigation, route }: RootStackScreenProps<'OTP'>) {
     ...(contactEmail
       ? [{ ch: 'EMAIL' as const, l: 'Email', emoji: '✉️', sub: contactEmail, color: colors.indigo }]
       : []),
-    { ch: 'WHATSAPP' as const, l: 'WhatsApp', emoji: '📲', sub: contactPhone || '—', color: '#25D366' },
+    { ch: 'WHATSAPP' as const, l: 'WhatsApp', emoji: '📲', sub: contactWhatsApp || '—', color: '#25D366' },
   ];
 
-  const activeContact = activeChannel === 'EMAIL' ? contactEmail : contactPhone;
+  const activeContact = activeChannel === 'EMAIL' ? contactEmail : contactWhatsApp;
 
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const inputs = useRef<(TextInput | null)[]>([]);

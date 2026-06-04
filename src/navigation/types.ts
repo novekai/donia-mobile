@@ -18,7 +18,7 @@ export type RootStackParams = {
   Onb3: undefined;
   Login: undefined;
   Signup: undefined;
-  OTP: { phone?: string; email?: string } | undefined;
+  OTP: { phone?: string; whatsapp?: string; email?: string } | undefined;
   ForgotPassword: undefined;
   ResetPassword: { contact: string; channel: 'WHATSAPP' | 'EMAIL' };
 
@@ -64,6 +64,8 @@ export type RootStackParams = {
   Privacy: undefined;
   Birthday: undefined;
   Language: undefined;
+  ChangePassword: undefined;
+  KYCUpload: { docType: 'CNI' | 'PASSPORT' | 'PERMIS' };
 
   // Dev only
   Gallery: undefined;

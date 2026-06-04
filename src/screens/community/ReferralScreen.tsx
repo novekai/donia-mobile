@@ -11,6 +11,8 @@ import {
   Alert,
   Share,
   RefreshControl,
+  Clipboard,
+  Linking,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
@@ -30,11 +32,15 @@ import { RootStackScreenProps } from '../../navigation/types';
 import { getReferral } from '../../api/referral';
 import { getApiErrorMessage } from '../../api/client';
 
-const SHARES: { key: 'whatsapp' | 'sms' | 'link'; l: string; bg: string; emoji: string }[] = [
+// SMS retiré sur demande Paul (06/2026) — on garde uniquement WhatsApp + Lien copiable.
+const SHARES: { key: 'whatsapp' | 'link'; l: string; bg: string; emoji: string }[] = [
   { key: 'whatsapp', l: 'WhatsApp', bg: '#25D366', emoji: '💬' },
-  { key: 'sms', l: 'SMS', bg: colors.indigo, emoji: '💌' },
-  { key: 'link', l: 'Lien', bg: colors.coral, emoji: '🔗' },
+  { key: 'link', l: 'Copier le lien', bg: colors.coral, emoji: '🔗' },
 ];
+
+function referralUrl(code: string): string {
+  return `https://doniia.com/?ref=${encodeURIComponent(code)}`;
+}
 
 function formatAmount(n: number): string {
   return Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
@@ -45,7 +51,7 @@ function ShareBtn({
   delay,
   onPress,
 }: {
-  s: typeof SHARES[number];
+  s: (typeof SHARES)[number];
   delay: number;
   onPress: () => void;
 }) {
@@ -70,22 +76,39 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
     staleTime: 0,
   });
 
-  async function onCopy(code: string) {
-    // We don't bundle expo-clipboard yet — fall back to Share so the user can
-    // paste the code wherever they want (notes, WhatsApp, etc.).
-    try {
-      await Share.share({ message: code });
-    } catch {
-      Alert.alert('Ton code', code);
-    }
+  // Copie directe dans le presse-papier système pour que l'utilisateur puisse
+  // coller le code partout (notes, WhatsApp, sms, autres apps).
+  async function onCopyCode(code: string) {
+    Clipboard.setString(code);
+    Alert.alert('Code copié ✨', `Ton code "${code}" est dans le presse-papier. Tu peux le coller où tu veux.`);
   }
 
-  async function onShare(_channel: 'whatsapp' | 'sms' | 'link', code: string) {
-    const text = `Rejoins-moi sur Donia ! Avec mon code ${code} tu as un cadeau de bienvenue.\nhttps://doniia.com`;
-    try {
-      await Share.share({ message: text });
-    } catch {
-      // user cancelled — nothing to do
+  async function onShare(channel: 'whatsapp' | 'link', code: string) {
+    const text = `Rejoins-moi sur Donia ! Avec mon code ${code} tu as un cadeau de bienvenue 🎁`;
+    const url = referralUrl(code);
+
+    if (channel === 'link') {
+      // Bouton "Copier le lien" → met le lien complet dans le presse-papier.
+      Clipboard.setString(url);
+      Alert.alert('Lien copié 🔗', 'Le lien de parrainage est dans le presse-papier. Colle-le où tu veux.');
+      return;
+    }
+
+    if (channel === 'whatsapp') {
+      // Deep-link WhatsApp : ouvre l'app sur l'écran de sélection de contact
+      // avec le texte pré-rempli. L'utilisateur choisit lui-même le destinataire.
+      const deepLink = `whatsapp://send?text=${encodeURIComponent(`${text}\n${url}`)}`;
+      try {
+        const ok = await Linking.canOpenURL(deepLink);
+        if (ok) {
+          await Linking.openURL(deepLink);
+          return;
+        }
+      } catch {}
+      // Fallback : sheet de partage système si WhatsApp pas installé.
+      try {
+        await Share.share({ message: `${text}\n${url}` });
+      } catch {}
     }
   }
 
@@ -175,16 +198,20 @@ export function ReferralScreen({ navigation }: RootStackScreenProps<'Referral'>)
         <Text style={styles.label}>Ton code de parrainage</Text>
         <View style={styles.codeBox}>
           <Text style={styles.code}>{code}</Text>
-          <Pressable style={styles.copy} onPress={() => onCopy(code)}>
+          <Pressable style={styles.copy} onPress={() => onCopyCode(code)}>
             <Text style={styles.copyText}>Copier</Text>
           </Pressable>
         </View>
 
+        <Text style={styles.label}>Partager mon parrainage</Text>
         <View style={styles.sharesRow}>
           {SHARES.map((s, i) => (
             <ShareBtn key={s.key} s={s} delay={i * 0.3} onPress={() => onShare(s.key, code)} />
           ))}
         </View>
+        <Text style={styles.shareHint}>
+          Tape sur WhatsApp pour ouvrir ton WhatsApp et choisir à qui envoyer ton lien.
+        </Text>
       </ScrollView>
     </ScreenContainer>
   );
@@ -221,7 +248,8 @@ const styles = StyleSheet.create({
   code: { flex: 1, fontFamily: fonts.bodyBold, fontSize: 22, color: colors.coral, letterSpacing: 1.2 },
   copy: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: colors.coral },
   copyText: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.bg },
-  sharesRow: { marginTop: 14, flexDirection: 'row', gap: 8 },
-  share: { padding: 14, borderRadius: radius.md, alignItems: 'center', gap: 6 },
-  shareText: { fontFamily: fonts.displaySemiBold, fontSize: 12, color: colors.bg },
+  sharesRow: { marginTop: 14, flexDirection: 'row', gap: 10 },
+  share: { paddingVertical: 22, paddingHorizontal: 14, borderRadius: radius.md, alignItems: 'center', gap: 8, minHeight: 84, justifyContent: 'center' },
+  shareText: { fontFamily: fonts.displaySemiBold, fontSize: 13, color: colors.bg, textAlign: 'center' },
+  shareHint: { marginTop: 10, fontFamily: fonts.displayItalic, fontSize: 11, color: colors.ink3, textAlign: 'center', lineHeight: 16 },
 });
