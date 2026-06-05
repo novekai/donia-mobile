@@ -116,6 +116,15 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={meQuery.isRefetching || txQuery.isRefetching} onRefresh={onRefresh} tintColor={colors.coral} />}
       >
+        {/* Bandeau anniv compact 1 ligne en haut (avant Akwaaba) — visible uniquement le jour J */}
+        {isMyBirthdayToday && (
+          <View style={styles.birthdayTopBar}>
+            <Text style={styles.birthdayTopText}>
+              🎂 Joyeux anniversaire, <Text style={styles.birthdayTopName}>{displayName}</Text> ! 🎉
+            </Text>
+          </View>
+        )}
+
         {/* Greeting */}
         <View style={styles.greetingRow}>
           <View>
@@ -123,14 +132,6 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
             <Text style={styles.name}>
               {displayName} <Animated.Text style={[wiggleStyle, { display: 'flex' }]}>👋</Animated.Text>
             </Text>
-            {isMyBirthdayToday && (
-              <View style={styles.birthdayBanner}>
-                <Text style={styles.birthdayBannerEmoji}>🎂</Text>
-                <Text style={styles.birthdayBannerText}>
-                  C'est ton anniv aujourd'hui ! Tes proches sont notifiés.
-                </Text>
-              </View>
-            )}
           </View>
           <HeaderAvatar />
         </View>
@@ -144,9 +145,9 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
           />
         </View>
 
-        {/* Fêtes du jour — section dédiée sur l'accueil */}
+        {/* Fêtes du jour — section dédiée sur l'accueil. Click → écran Birthdays. */}
         <View style={{ paddingHorizontal: 22, marginTop: 18 }}>
-          <BirthdayStrip onSeeAll={() => {}} />
+          <BirthdayStrip onSeeAll={() => navigation.navigate('Birthdays')} />
         </View>
 
         {/* Occasions */}
@@ -192,9 +193,9 @@ const styles = StyleSheet.create({
   greetingRow: { paddingHorizontal: 22, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   akwaaba: { fontFamily: fonts.displayItalic, fontSize: 14, color: colors.ink2 },
   name: { fontFamily: fonts.displayMedium, fontSize: 26, color: colors.ink, letterSpacing: -0.5 },
-  birthdayBanner: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: 'rgba(244,72,111,0.12)', borderWidth: 1, borderColor: 'rgba(244,72,111,0.3)', maxWidth: 260 },
-  birthdayBannerEmoji: { fontSize: 18 },
-  birthdayBannerText: { flex: 1, fontFamily: fonts.displaySemiBold, fontSize: 12, color: colors.coralDeep },
+  birthdayTopBar: { marginHorizontal: 22, marginTop: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 99, backgroundColor: 'rgba(244,72,111,0.10)', borderWidth: 1, borderColor: 'rgba(244,72,111,0.3)', alignItems: 'center' },
+  birthdayTopText: { fontFamily: fonts.displaySemiBold, fontSize: 13, color: colors.coralDeep, textAlign: 'center' },
+  birthdayTopName: { fontFamily: fonts.bodyBold, color: colors.coralDeep },
   bellBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center' },
   bellDot: { position: 'absolute', top: 8, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.pink },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },

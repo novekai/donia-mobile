@@ -46,9 +46,36 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
     if (pw.length < 8) return Alert.alert('Mot de passe trop court', 'Min. 8 caractères.');
     if (!pwMatch) return Alert.alert('Mots de passe différents');
     if (!cgu) return Alert.alert('Tu dois accepter les CGU pour continuer');
+
+    // Numéros béninois (+229) : depuis 2021 la plupart des numéros mobiles ont
+    // un préfixe "01" ajouté, mais beaucoup de comptes WhatsApp restent enregistrés
+    // SANS ce préfixe (créés avant 2021). Pour éviter d'échouer silencieusement,
+    // on demande à l'utilisateur de confirmer son format.
+    const localDigits = waLocal.replace(/\D/g, '');
+    if (waCountry.code === 'BJ' && localDigits.startsWith('01') && localDigits.length === 10) {
+      const stripped = localDigits.slice(2);
+      Alert.alert(
+        'Numéro WhatsApp Bénin',
+        `Ton WhatsApp est enregistré sur quel numéro ?\n\n` +
+          `• Avec le 01 : +229 ${localDigits}\n` +
+          `• Sans le 01 : +229 ${stripped}\n\n` +
+          `Au Bénin, beaucoup de comptes WhatsApp sont restés sur l'ancien format (sans 01). ` +
+          `Si tu choisis le mauvais, tu ne recevras pas le code.`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: `Sans 01 (${stripped.slice(0, 4)}…)`, onPress: () => { setWaLocal(stripped); submitWithLocal(stripped); } },
+          { text: 'Avec 01', onPress: () => submitWithLocal(localDigits) },
+        ],
+      );
+      return;
+    }
+    submitWithLocal(localDigits);
+  }
+
+  async function submitWithLocal(localDigits: string) {
     setLoading(true);
     try {
-      const whatsappE164 = toE164(waCountry, waLocal);
+      const whatsappE164 = toE164(waCountry, localDigits);
       // Étape 1 : on déclare l'inscription au backend qui crée une PendingSignup
       // et envoie l'OTP par WhatsApp. Aucun compte n'est créé tant que l'OTP n'est pas validé.
       await authApi.signup({

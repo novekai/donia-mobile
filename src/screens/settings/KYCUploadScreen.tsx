@@ -22,13 +22,21 @@ const DOC_LABEL: Record<KycDocType, string> = {
 
 export function KYCUploadScreen({ navigation, route }: RootStackScreenProps<'KYCUpload'>) {
   const docType = route.params?.docType ?? 'CNI';
-  const needsVerso = docType !== 'PASSPORT';
+  const existingRectoUrl = route.params?.existingRectoUrl ?? null;
+  const existingVersoUrl = route.params?.existingVersoUrl ?? null;
+  const isEditing = Boolean(existingRectoUrl);
 
-  const [rectoUri, setRectoUri] = useState<string | null>(null);
-  const [versoUri, setVersoUri] = useState<string | null>(null);
+  // Recto et verso peuvent être :
+  // - null : pas de photo (premier upload)
+  // - une URI locale (file://) si l'utilisateur a pris une nouvelle photo
+  // - l'URL R2 existante (https://) si on a chargé une soumission antérieure
+  const [rectoUri, setRectoUri] = useState<string | null>(existingRectoUrl);
+  const [versoUri, setVersoUri] = useState<string | null>(existingVersoUrl);
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = Boolean(rectoUri) && (!needsVerso || Boolean(versoUri));
+  // Verso toujours optionnel (certaines pièces n'ont pas de verso).
+  // Le recto seul suffit pour soumettre.
+  const canSubmit = Boolean(rectoUri);
 
   async function pickImage(side: 'recto' | 'verso') {
     // Permission d'accès aux médias
@@ -62,21 +70,37 @@ export function KYCUploadScreen({ navigation, route }: RootStackScreenProps<'KYC
     else setVersoUri(uri);
   }
 
+  // Détermine si une URI locale doit être uploadée (file://) ou si c'est déjà
+  // une URL R2 existante (https://) à conserver telle quelle.
+  function isLocalUri(uri: string | null): boolean {
+    if (!uri) return false;
+    return !uri.startsWith('http');
+  }
+
   async function onSubmit() {
     if (submitting || !canSubmit) return;
     setSubmitting(true);
     try {
-      const recto = await uploadKycImage(rectoUri!, 'recto');
+      // Recto : upload seulement si nouvelle photo, sinon garde l'URL existante
+      const rectoUrl = isLocalUri(rectoUri) ? (await uploadKycImage(rectoUri!, 'recto')).url : rectoUri!;
+      // Verso : pareil. Optionnel.
       let versoUrl: string | undefined;
-      if (needsVerso && versoUri) {
-        const verso = await uploadKycImage(versoUri, 'verso');
-        versoUrl = verso.url;
+      if (versoUri) {
+        versoUrl = isLocalUri(versoUri) ? (await uploadKycImage(versoUri, 'verso')).url : versoUri;
       }
-      await submitKyc({ docType, docUrlRecto: recto.url, docUrlVerso: versoUrl });
+      await submitKyc({ docType, docUrlRecto: rectoUrl, docUrlVerso: versoUrl });
       Alert.alert(
-        'Vérification soumise 🎉',
-        "On va vérifier ta pièce sous 24-48h. Tu recevras une notification dès que c'est validé.",
-        [{ text: 'OK', onPress: () => navigation.popToTop() }],
+        isEditing ? 'Soumission mise à jour ✨' : 'Vérification soumise 🎉',
+        isEditing
+          ? "On va re-vérifier ta pièce sous 24-48h."
+          : "On va vérifier ta pièce sous 24-48h. Tu recevras une notification dès que c'est validé.",
+        [{
+          text: 'OK',
+          onPress: () => {
+            // Retour propre vers Paramètres (pas popToTop qui sortait du flux auth)
+            navigation.navigate('Settings');
+          },
+        }],
       );
     } catch (e) {
       Alert.alert('Échec de la soumission', getApiErrorMessage(e));
@@ -93,33 +117,31 @@ export function KYCUploadScreen({ navigation, route }: RootStackScreenProps<'KYC
       <View style={styles.bars}>
         <View style={[styles.bar, { backgroundColor: colors.coral }]} />
         <View style={[styles.bar, { backgroundColor: colors.coral }]} />
-        <View style={[styles.bar, { backgroundColor: colors.coralSoft }]} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 24, paddingBottom: 130 }}>
-        <Text style={styles.kicker}>Étape 2 sur 3 · Photos</Text>
-        <Text style={styles.title}>Photographie ta pièce 📸</Text>
+        <Text style={styles.kicker}>{isEditing ? 'Modifier ma soumission' : 'Étape 2 sur 2 · Photos'}</Text>
+        <Text style={styles.title}>{isEditing ? 'Remplacer mes photos 📸' : 'Photographie ta pièce 📸'}</Text>
         <Text style={styles.subtitle}>
           Cadre bien {DOC_LABEL[docType]}, sans flash ni reflet. Les 4 coins doivent être visibles.
+          {isEditing ? ' Touche "Changer" sur les photos déjà soumises pour les remplacer.' : ''}
         </Text>
 
         <Slot
-          label={needsVerso ? 'Recto' : 'Page photo'}
+          label="Recto"
           uri={rectoUri}
           onCamera={() => takePhoto('recto')}
           onGallery={() => pickImage('recto')}
           onRemove={() => setRectoUri(null)}
         />
 
-        {needsVerso && (
-          <Slot
-            label="Verso"
-            uri={versoUri}
-            onCamera={() => takePhoto('verso')}
-            onGallery={() => pickImage('verso')}
-            onRemove={() => setVersoUri(null)}
-          />
-        )}
+        <Slot
+          label="Verso (optionnel)"
+          uri={versoUri}
+          onCamera={() => takePhoto('verso')}
+          onGallery={() => pickImage('verso')}
+          onRemove={() => setVersoUri(null)}
+        />
 
         <View style={styles.privacy}>
           <IconLock color={colors.mint} />

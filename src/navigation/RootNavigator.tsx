@@ -32,6 +32,7 @@ import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 
 // Main flow (above tabs)
 import { NotificationsScreen } from '../screens/main/NotificationsScreen';
+import { BirthdaysScreen } from '../screens/main/BirthdaysScreen';
 import { TopUpMethodScreen } from '../screens/wallet/TopUpMethodScreen';
 import { TopUpMobileMoneyScreen } from '../screens/wallet/TopUpMobileMoneyScreen';
 import { TopUpCodeScreen } from '../screens/wallet/TopUpCodeScreen';
@@ -122,6 +123,7 @@ export function RootNavigator() {
 
         {/* Above tabs */}
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Birthdays" component={BirthdaysScreen} />
         <Stack.Screen name="TopUpMethod" component={TopUpMethodScreen} />
         <Stack.Screen name="TopUpMobileMoney" component={TopUpMobileMoneyScreen} />
         <Stack.Screen name="TopUpCode" component={TopUpCodeScreen} />

@@ -39,6 +39,7 @@ export type RootStackParams = {
 
   // Modal / push above tabs
   Notifications: undefined;
+  Birthdays: undefined;
   TopUpMethod: undefined;
   TopUpMobileMoney: undefined;
   TopUpCode: undefined;
@@ -67,7 +68,7 @@ export type RootStackParams = {
   Language: undefined;
   ChangePassword: undefined;
   NotificationsPref: undefined;
-  KYCUpload: { docType: 'CNI' | 'PASSPORT' | 'PERMIS' };
+  KYCUpload: { docType: 'CNI' | 'PASSPORT' | 'PERMIS'; existingRectoUrl?: string; existingVersoUrl?: string };
 
   // Dev only
   Gallery: undefined;

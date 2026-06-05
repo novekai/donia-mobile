@@ -98,6 +98,8 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
             onPress={() =>
               navigation.navigate('KYCUpload', {
                 docType: latest.docType,
+                existingRectoUrl: latest.docUrlRecto,
+                existingVersoUrl: latest.docUrlVerso ?? undefined,
               })
             }
             style={styles.modifyBtn}
@@ -158,7 +160,6 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
       <View style={styles.bars}>
         <View style={[styles.bar, { backgroundColor: colors.coral }]} />
         <View style={[styles.bar, { backgroundColor: colors.coralSoft }]} />
-        <View style={[styles.bar, { backgroundColor: colors.coralSoft }]} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 24, paddingBottom: 130 }}>
@@ -168,7 +169,7 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
           </View>
         ) : (
           <>
-            <Text style={styles.kicker}>Étape 1 sur 3 · Pièce d'identité</Text>
+            <Text style={styles.kicker}>Étape 1 sur 2 · Pièce d'identité</Text>
             <Text style={styles.title}>Choisis ta pièce 🪪</Text>
             <Text style={styles.subtitle}>
               Pour respecter les règles de paiement Mobile Money, on doit vérifier qui tu es. C'est rapide.
