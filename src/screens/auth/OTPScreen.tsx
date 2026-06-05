@@ -21,7 +21,9 @@ export function OTPScreen({ navigation, route }: RootStackScreenProps<'OTP'>) {
   const phoneFromRoute = route.params?.phone;
   const whatsappFromRoute = route.params?.whatsapp;
   const emailFromRoute = route.params?.email;
+  const isSignupConfirm = Boolean(route.params?.isSignupConfirm);
   const user = useAuthStore((s) => s.user);
+  const signIn = useAuthStore((s) => s.signIn);
   // Un user a parfois un numéro de téléphone et un numéro WhatsApp distincts.
   // Le canal WHATSAPP doit utiliser le numéro WhatsApp en priorité.
   const contactPhone = phoneFromRoute ?? user?.phone ?? '';
@@ -53,14 +55,25 @@ export function OTPScreen({ navigation, route }: RootStackScreenProps<'OTP'>) {
     return () => clearInterval(t);
   }, []);
 
-  // Envoie automatiquement l'OTP au mount + à chaque changement de canal
+  // Cooldown de renvoi : 60s.
+  const RESEND_COOLDOWN = 60;
+
+  // Envoie automatiquement l'OTP au mount + à chaque changement de canal.
+  // Exception : si on vient du signup, le backend a déjà envoyé l'OTP lors du POST /signup
+  // → on évite de renvoyer un 2e code au mount initial (et on démarre direct le cooldown).
+  const skipFirstSend = React.useRef(isSignupConfirm);
   useEffect(() => {
     if (!activeContact) return;
+    if (skipFirstSend.current) {
+      skipFirstSend.current = false;
+      setSecondsLeft(RESEND_COOLDOWN);
+      return;
+    }
     setSending(true);
     setSecondsLeft(0);
     authApi
       .sendOtp(activeContact, activeChannel)
-      .then((r) => setSecondsLeft(r.expiresInSeconds ?? 600))
+      .then(() => setSecondsLeft(RESEND_COOLDOWN))
       .catch((e) => Alert.alert("Envoi échoué", getApiErrorMessage(e)))
       .finally(() => setSending(false));
   }, [activeContact, activeChannel]);
@@ -80,8 +93,16 @@ export function OTPScreen({ navigation, route }: RootStackScreenProps<'OTP'>) {
     if (!activeContact) return Alert.alert("Pas d'identifiant associé");
     setVerifying(true);
     try {
-      await authApi.verifyOtp(activeContact, activeChannel, code);
-      navigation.replace('Main', { screen: 'Home' });
+      if (isSignupConfirm) {
+        // Flow signup : on confirme et le backend crée le compte + nous renvoie un token.
+        const res = await authApi.signupConfirm(phoneFromRoute ?? activeContact, code);
+        signIn(res);
+        navigation.replace('Main', { screen: 'Home' });
+      } else {
+        // Flow re-vérification d'un user existant (rare en V1, mais on garde la route).
+        await authApi.verifyOtp(activeContact, activeChannel, code);
+        navigation.replace('Main', { screen: 'Home' });
+      }
     } catch (e) {
       Alert.alert('Code invalide', getApiErrorMessage(e));
     } finally {
@@ -94,8 +115,8 @@ export function OTPScreen({ navigation, route }: RootStackScreenProps<'OTP'>) {
     if (!activeContact) return;
     setSending(true);
     try {
-      const r = await authApi.sendOtp(activeContact, activeChannel);
-      setSecondsLeft(r.expiresInSeconds ?? 600);
+      await authApi.sendOtp(activeContact, activeChannel);
+      setSecondsLeft(RESEND_COOLDOWN);
       Alert.alert('Code renvoyé', `Nouveau code envoyé via ${activeChannel === 'EMAIL' ? 'email' : 'WhatsApp'}.`);
     } catch (e) {
       Alert.alert('Renvoi échoué', getApiErrorMessage(e));

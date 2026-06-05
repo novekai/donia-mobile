@@ -98,6 +98,16 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
   const balance = meQuery.data?.user.wallet?.balancePrincipal ?? '0';
   const recentTx = txQuery.data?.items ?? [];
 
+  // Si c'est l'anniversaire du user aujourd'hui ET qu'il a opté pour la visibilité publique
+  // → on affiche un bandeau "C'est mon anniv 🎉" sur la home.
+  const meUser = meQuery.data?.user;
+  const isMyBirthdayToday = (() => {
+    if (!meUser?.dob || !meUser?.birthdayPublic) return false;
+    const dob = new Date(meUser.dob);
+    const today = new Date();
+    return dob.getDate() === today.getDate() && dob.getMonth() === today.getMonth();
+  })();
+
   return (
     <ScreenContainer>
       <FunBackground palette="cream" />
@@ -113,6 +123,14 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
             <Text style={styles.name}>
               {displayName} <Animated.Text style={[wiggleStyle, { display: 'flex' }]}>👋</Animated.Text>
             </Text>
+            {isMyBirthdayToday && (
+              <View style={styles.birthdayBanner}>
+                <Text style={styles.birthdayBannerEmoji}>🎂</Text>
+                <Text style={styles.birthdayBannerText}>
+                  C'est ton anniv aujourd'hui ! Tes proches sont notifiés.
+                </Text>
+              </View>
+            )}
           </View>
           <HeaderAvatar />
         </View>
@@ -171,9 +189,12 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  greetingRow: { paddingHorizontal: 22, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  greetingRow: { paddingHorizontal: 22, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   akwaaba: { fontFamily: fonts.displayItalic, fontSize: 14, color: colors.ink2 },
   name: { fontFamily: fonts.displayMedium, fontSize: 26, color: colors.ink, letterSpacing: -0.5 },
+  birthdayBanner: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: 'rgba(244,72,111,0.12)', borderWidth: 1, borderColor: 'rgba(244,72,111,0.3)', maxWidth: 260 },
+  birthdayBannerEmoji: { fontSize: 18 },
+  birthdayBannerText: { flex: 1, fontFamily: fonts.displaySemiBold, fontSize: 12, color: colors.coralDeep },
   bellBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center' },
   bellDot: { position: 'absolute', top: 8, right: 9, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.pink },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },

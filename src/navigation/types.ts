@@ -18,7 +18,7 @@ export type RootStackParams = {
   Onb3: undefined;
   Login: undefined;
   Signup: undefined;
-  OTP: { phone?: string; whatsapp?: string; email?: string } | undefined;
+  OTP: { phone?: string; whatsapp?: string; email?: string; isSignupConfirm?: boolean } | undefined;
   ForgotPassword: undefined;
   ResetPassword: { contact: string; channel: 'WHATSAPP' | 'EMAIL' };
 

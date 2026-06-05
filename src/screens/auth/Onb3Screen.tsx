@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
   disc: { width: 160, height: 160, borderRadius: 80, overflow: 'hidden' },
   discInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  discText: { fontFamily: fonts.bodyBold, fontSize: 64, color: colors.ink, letterSpacing: -2.5 },
+  discText: { fontFamily: fonts.bodyBold, fontSize: 46, color: colors.ink, letterSpacing: -1.5, textAlign: 'center' },
   title: { fontFamily: fonts.displayMedium, fontSize: 32, color: colors.ink, textAlign: 'center', letterSpacing: -0.6, lineHeight: 36 },
   titleItalic: { fontFamily: fonts.displayItalic, color: colors.mango },
   subtitle: { marginTop: 14, fontSize: 14, color: colors.ink2, textAlign: 'center', lineHeight: 21, maxWidth: 280, fontFamily: fonts.bodyRegular },

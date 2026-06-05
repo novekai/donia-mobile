@@ -3,6 +3,11 @@ import { apiPost } from './client';
 import type { AuthResponse, OtpChannel } from './types';
 import { getDeviceName } from '../lib/deviceInfo';
 
+// Étape 1 du signup : stocke un PendingSignup côté backend + envoie l'OTP WhatsApp.
+// Aucun compte User n'est créé tant que l'OTP n'est pas validé.
+// Renvoie le numéro destinataire de l'OTP (pour affichage côté mobile).
+export type SignupPendingResponse = { ok: true; pendingPhone: string; otpTarget: string };
+
 export function signup(body: {
   name: string;
   phone: string;
@@ -13,9 +18,13 @@ export function signup(body: {
   dob?: string;
   country?: string;
   referredBy?: string;
-}): Promise<AuthResponse> {
-  // On envoie le nom de l'appareil pour qu'il apparaisse dans "Appareils connectés"
-  return apiPost<AuthResponse>('/v1/auth/signup', { ...body, deviceName: getDeviceName() });
+}): Promise<SignupPendingResponse> {
+  return apiPost<SignupPendingResponse>('/v1/auth/signup', { ...body, deviceName: getDeviceName() });
+}
+
+// Étape 2 du signup : valide l'OTP et crée le compte. Renvoie le token de session.
+export function signupConfirm(phone: string, code: string): Promise<AuthResponse> {
+  return apiPost<AuthResponse>('/v1/auth/signup/confirm', { phone, code });
 }
 
 export function login(identifier: string, password: string): Promise<AuthResponse> {

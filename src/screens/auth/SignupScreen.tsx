@@ -49,9 +49,11 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
     setLoading(true);
     try {
       const whatsappE164 = toE164(waCountry, waLocal);
-      const res = await authApi.signup({
+      // Étape 1 : on déclare l'inscription au backend qui crée une PendingSignup
+      // et envoie l'OTP par WhatsApp. Aucun compte n'est créé tant que l'OTP n'est pas validé.
+      await authApi.signup({
         name: name.trim(),
-        phone: whatsappE164,      // phone = whatsapp côté API
+        phone: whatsappE164,
         whatsapp: whatsappE164,
         email: email.trim() || undefined,
         password: pw,
@@ -59,8 +61,9 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
         country: waCountry.code,
         dob: dobDay && dobMonth && dobYear ? `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}` : undefined,
       });
-      signIn(res);
-      navigation.navigate('OTP', { phone: whatsappE164, whatsapp: whatsappE164, email: email.trim() || undefined });
+      // Pas de signIn() ici — le user n'a pas encore de session. signIn() sera fait
+      // dans OTPScreen une fois le code validé (qui retournera le token).
+      navigation.navigate('OTP', { phone: whatsappE164, whatsapp: whatsappE164, email: email.trim() || undefined, isSignupConfirm: true });
     } catch (e) {
       Alert.alert('Inscription échouée', getApiErrorMessage(e));
     } finally {
@@ -133,7 +136,7 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
           onLocalNumberChange={setWaLocal}
         />
         <Text style={styles.waHint}>
-          On t'enverra ton code de vérification par WhatsApp. Pas de SMS chez Donia.
+          On t'enverra ton code de vérification par WhatsApp.
         </Text>
 
         <View style={{ marginTop: spacing.sm }} />
