@@ -21,24 +21,37 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-// Extrait un libellé lisible à partir d'un user-agent (best-effort).
-// "okhttp/4.9.2" → "Android · Donia app"
-// "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ..." → "Windows · Chrome"
-function shortenUA(ua: string | null): { os: string; emoji: string } {
-  if (!ua) return { os: 'Appareil inconnu', emoji: '📱' };
-  if (ua.toLowerCase().startsWith('okhttp')) return { os: 'Android · Donia app', emoji: '🤖' };
-  if (ua.includes('iPhone') || ua.includes('iOS')) return { os: 'iPhone', emoji: '🍎' };
-  if (ua.includes('iPad')) return { os: 'iPad', emoji: '🍎' };
-  if (ua.includes('Mac OS X')) return { os: 'Mac', emoji: '💻' };
-  if (ua.includes('Windows')) return { os: 'Windows', emoji: '🪟' };
-  if (ua.includes('Android')) return { os: 'Android', emoji: '🤖' };
-  if (ua.includes('Linux')) return { os: 'Linux', emoji: '🐧' };
-  return { os: 'Navigateur web', emoji: '🌐' };
+// Choisit l'emoji selon la marque/OS détecté dans deviceName ou user-agent.
+function emojiFor(deviceName: string | null, ua: string | null): string {
+  const s = `${deviceName ?? ''} ${ua ?? ''}`.toLowerCase();
+  if (s.includes('iphone') || s.includes('ipad') || s.includes('apple') || s.includes('ios')) return '🍎';
+  if (s.includes('windows')) return '🪟';
+  if (s.includes('mac')) return '💻';
+  if (s.includes('linux')) return '🐧';
+  if (s.includes('android') || s.includes('tecno') || s.includes('infinix') || s.includes('samsung') || s.includes('xiaomi') || s.includes('redmi') || s.includes('huawei') || s.includes('itel') || s.includes('okhttp')) return '🤖';
+  if (s.includes('mozilla') || s.includes('chrome') || s.includes('firefox') || s.includes('safari')) return '🌐';
+  return '📱';
+}
+
+// Fallback si le mobile n'a pas envoyé deviceName (anciennes sessions / web).
+function fallbackName(ua: string | null): string {
+  if (!ua) return 'Appareil inconnu';
+  if (ua.toLowerCase().startsWith('okhttp')) return 'Android · Donia app';
+  if (ua.includes('iPhone')) return 'iPhone';
+  if (ua.includes('iPad')) return 'iPad';
+  if (ua.includes('Mac OS X')) return 'Mac';
+  if (ua.includes('Windows')) return 'Windows';
+  if (ua.includes('Android')) return 'Android';
+  if (ua.includes('Linux')) return 'Linux';
+  return 'Navigateur web';
 }
 
 function SessionRow({ s, onRevoke, busy, variant }: { s: ActiveSession; onRevoke: (id: string) => void; busy: boolean; variant: Variant }) {
   const { t } = useTranslation();
-  const { os, emoji } = shortenUA(s.userAgent);
+  // Affiche le deviceName envoyé par le mobile (ex: "Tecno Camon 20") en priorité.
+  // Si absent (vieilles sessions ou web), on tombe sur le fallback user-agent.
+  const displayName = s.deviceName ?? fallbackName(s.userAgent);
+  const emoji = emojiFor(s.deviceName, s.userAgent);
   return (
     <View style={styles.row}>
       <View style={styles.iconBox}>
@@ -46,7 +59,7 @@ function SessionRow({ s, onRevoke, busy, variant }: { s: ActiveSession; onRevoke
       </View>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={styles.label}>{os}</Text>
+          <Text style={styles.label}>{displayName}</Text>
           {s.isCurrent && <View style={styles.badge}><Text style={styles.badgeText}>{t('sessions.currentBadge')}</Text></View>}
         </View>
         <Text style={styles.sub}>

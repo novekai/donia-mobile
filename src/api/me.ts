@@ -58,6 +58,7 @@ export type ActiveSession = {
   id: string;
   ip: string | null;
   userAgent: string | null;
+  deviceName: string | null;
   createdAt: string;
   expiresAt: string;
   isCurrent: boolean;

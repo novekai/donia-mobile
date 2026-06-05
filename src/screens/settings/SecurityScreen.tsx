@@ -15,7 +15,9 @@ import { deleteAccount } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
 
-type Row = { id: 'password' | '2fa' | 'devices' | 'sessions'; emoji: string; color: string } & (
+// "Sessions récentes" retirée (06/2026) : elle utilisait le même endpoint que
+// "Appareils connectés", donc rien ne justifiait 2 rangs séparés.
+type Row = { id: 'password' | '2fa' | 'devices'; emoji: string; color: string } & (
   | { kind: 'chev' }
   | { kind: 'toggle' }
 );
@@ -31,14 +33,12 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
     { kind: 'chev', id: 'password', emoji: '🔑', color: colors.mango },
     { kind: 'toggle', id: '2fa', emoji: '🛡️', color: colors.mint },
     { kind: 'chev', id: 'devices', emoji: '📱', color: colors.indigo },
-    { kind: 'chev', id: 'sessions', emoji: '🕐', color: colors.plum },
   ];
 
   const ROW_LABELS: Record<Row['id'], { label: string; sub: string }> = {
     password: { label: t('security.password'), sub: t('security.passwordSub') },
     '2fa': { label: t('security.twofa'), sub: t('security.twofaSub') },
     devices: { label: t('security.devices'), sub: t('security.devicesSub') },
-    sessions: { label: t('security.sessions'), sub: t('security.sessionsSub') },
   };
 
   function onDeleteAccount() {
@@ -97,7 +97,6 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
             if (r.kind === 'toggle') return;
             if (r.id === 'password') navigation.navigate('ChangePassword');
             else if (r.id === 'devices') navigation.navigate('Sessions', { variant: 'devices' });
-            else if (r.id === 'sessions') navigation.navigate('Sessions', { variant: 'sessions' });
           };
           const on2FAToggle = () => {
             if (r.kind !== 'toggle') return;

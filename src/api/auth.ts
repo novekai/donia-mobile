@@ -1,6 +1,7 @@
 // Auth endpoints
 import { apiPost } from './client';
 import type { AuthResponse, OtpChannel } from './types';
+import { getDeviceName } from '../lib/deviceInfo';
 
 export function signup(body: {
   name: string;
@@ -13,11 +14,12 @@ export function signup(body: {
   country?: string;
   referredBy?: string;
 }): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/v1/auth/signup', body);
+  // On envoie le nom de l'appareil pour qu'il apparaisse dans "Appareils connectés"
+  return apiPost<AuthResponse>('/v1/auth/signup', { ...body, deviceName: getDeviceName() });
 }
 
 export function login(identifier: string, password: string): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/v1/auth/login', { identifier, password });
+  return apiPost<AuthResponse>('/v1/auth/login', { identifier, password, deviceName: getDeviceName() });
 }
 
 export function sendOtp(contact: string, channel: OtpChannel): Promise<{ ok: true; expiresInSeconds: number }> {
