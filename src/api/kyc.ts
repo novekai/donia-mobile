@@ -24,6 +24,7 @@ export async function uploadKycImage(uri: string, side: 'recto' | 'verso'): Prom
   form.append('side', side);
   const { data } = await api.post<{ url: string }>('/v1/kyc/upload', form, {
     transformRequest: (d) => d,
+    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
   });
   return data;

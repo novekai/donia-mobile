@@ -19,9 +19,10 @@ export function updateMe(patch: Partial<Pick<User, EditableProfileFields>>): Pro
 }
 
 // Upload a profile photo. `uri` is a local file URI (file:// on iOS, content:// on Android).
-// IMPORTANT: do NOT set Content-Type manually — RN auto-generates the multipart boundary
-// when we let axios infer the header from FormData. Forcing the header drops the boundary
-// and multer can't parse the upload.
+// IMPORTANT : il faut explicitement override le Content-Type à 'multipart/form-data'
+// pour que React Native ajoute le bon header AVEC le boundary. Sinon l'instance axios
+// (configurée avec 'application/json' par défaut) garde son header et multer rejette
+// la requête côté backend → l'app affiche "Network Error / Impossible de joindre le serveur".
 export async function uploadAvatar(uri: string): Promise<{ user: User }> {
   const form = new FormData();
   const fileName = uri.split('/').pop() || `avatar-${Date.now()}.jpg`;
@@ -30,6 +31,7 @@ export async function uploadAvatar(uri: string): Promise<{ user: User }> {
   form.append('photo', { uri, name: fileName, type: mimeType } as unknown as Blob);
   const { data } = await api.post<{ user: User }>('/v1/me/avatar', form, {
     transformRequest: (d) => d,
+    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000,
   });
   return data;
