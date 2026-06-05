@@ -14,6 +14,7 @@ import { colors, radius } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { getMe } from '../../api/me';
+import { getPlatformSettings } from '../../api/platformSettings';
 
 const PRESETS = ['1 000', '5 000', '10 000', '25 000'];
 
@@ -37,6 +38,22 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const balance = Number(meQuery.data?.user?.wallet?.balancePrincipal ?? 0);
   const afterBalance = Math.max(0, balance - Number(raw || '0'));
+
+  // Contraintes de plateforme pilotées depuis l'admin (montants min / max sans KYC).
+  // On lit ces valeurs au démarrage (cached 5 min côté React Query) au lieu de hardcoder.
+  const settingsQuery = useQuery({
+    queryKey: ['platform-settings'],
+    queryFn: getPlatformSettings,
+    staleTime: 5 * 60_000,
+  });
+  const minCard = settingsQuery.data?.minCardAmount ?? 500;
+  const maxNoKyc = settingsQuery.data?.maxAmountNoKyc ?? 50_000;
+  const userKycApproved = meQuery.data?.user?.kycStatus === 'APPROVED';
+
+  const amountNum = Number(raw || '0');
+  const tooLow = amountNum > 0 && amountNum < minCard;
+  const kycRequired = !userKycApproved && amountNum > maxNoKyc;
+  const blockNext = tooLow || kycRequired;
 
   const formatted = Number(raw || '0').toLocaleString('fr-FR').replace(/,/g, ' ');
 
@@ -105,10 +122,27 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
           </View>
           <Text style={styles.recapAmt}>{formatted} FCFA</Text>
         </View>
+
+        {/* Garde-fous : montants min/max appliqués depuis la conf admin */}
+        {tooLow && (
+          <Text style={styles.warn}>
+            ⚠️ Minimum {minCard.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA par carte.
+          </Text>
+        )}
+        {kycRequired && (
+          <Text style={styles.warn}>
+            🪪 Au-delà de {maxNoKyc.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA, la vérification d'identité (KYC) est obligatoire.
+          </Text>
+        )}
       </View>
 
       <View style={styles.footer}>
-        <Button label="Continuer" pulse disabled={!raw || Number(raw) <= 0} onPress={() => navigation.navigate('SendStyle', { categoryKey, recipientPhone, recipientName, amount: formatted })} />
+        <Button
+          label="Continuer"
+          pulse
+          disabled={!raw || amountNum <= 0 || blockNext}
+          onPress={() => navigation.navigate('SendStyle', { categoryKey, recipientPhone, recipientName, amount: formatted })}
+        />
       </View>
     </ScreenContainer>
   );
@@ -129,5 +163,6 @@ const styles = StyleSheet.create({
   recapHint: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
   recapHintText: { fontSize: 10, color: colors.green, fontStyle: 'italic' },
   recapAmt: { fontFamily: fonts.bodyBold, fontSize: 22, color: colors.coral, letterSpacing: -0.5 },
+  warn: { marginTop: 10, fontSize: 12, color: colors.coralDeep, fontFamily: fonts.bodyMedium, textAlign: 'center', lineHeight: 17 },
   footer: { position: 'absolute', bottom: 22, left: 22, right: 22 },
 });
