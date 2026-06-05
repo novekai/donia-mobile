@@ -13,12 +13,11 @@ import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { listBirthdays, type BirthdayPerson } from '../../api/birthdays';
 
-type Filter = 'today' | 'tomorrow' | 'after';
+type Filter = 'today' | 'tomorrow';
 
 const FILTERS: { key: Filter; label: string; emoji: string }[] = [
   { key: 'today', label: "Aujourd'hui", emoji: '🎂' },
   { key: 'tomorrow', label: 'Demain', emoji: '✨' },
-  { key: 'after', label: 'Après-d.', emoji: '🗓️' },
 ];
 
 export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'>) {
@@ -27,10 +26,13 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
   const query = useQuery({ queryKey: ['birthdays'], queryFn: listBirthdays });
 
   const all = query.data?.people ?? [];
+  // On garde les users today / tomorrow (after-demain pas affiche).
   const filtered = useMemo(() => all.filter((p) => p.day === filter), [all, filter]);
   const counts = useMemo(() => {
-    const map: Record<Filter, number> = { today: 0, tomorrow: 0, after: 0 };
-    for (const p of all) map[p.day]++;
+    const map: Record<Filter, number> = { today: 0, tomorrow: 0 };
+    for (const p of all) {
+      if (p.day === 'today' || p.day === 'tomorrow') map[p.day]++;
+    }
     return map;
   }, [all]);
 
@@ -94,9 +96,7 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
             <Text style={styles.emptyTitle}>
               {filter === 'today'
                 ? "Personne ne fête son anniversaire aujourd'hui."
-                : filter === 'tomorrow'
-                ? "Personne ne fête demain."
-                : "Personne ne fête après-demain."}
+                : "Personne ne fête demain."}
             </Text>
             <Text style={styles.emptySub}>
               Tes proches doivent activer "Annoncer mon anniversaire" dans leurs paramètres pour apparaître ici.
@@ -118,7 +118,7 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{p.name}</Text>
                   <Text style={styles.sub}>
-                    {p.day === 'today' ? "C'est aujourd'hui 🎂" : p.day === 'tomorrow' ? "Demain ✨" : "Après-demain 🗓️"}
+                    {p.day === 'today' ? "C'est aujourd'hui 🎂" : 'Demain ✨'}
                   </Text>
                 </View>
                 <Pressable onPress={() => onSendCard(p)} style={styles.sendBtn}>
