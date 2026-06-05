@@ -105,7 +105,7 @@ export function NotificationsScreen({ navigation }: RootStackScreenProps<'Notifi
   ];
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader
         title={t('notifsList.title')}

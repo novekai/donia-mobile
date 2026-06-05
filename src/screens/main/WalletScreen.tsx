@@ -57,7 +57,7 @@ export function WalletScreen({ navigation }: RootStackScreenProps<'Wallet'>) {
   const filleuls = refQuery.data?.filleulsCount ?? 0;
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScrollView
         contentContainerStyle={{ paddingBottom: 140 }}

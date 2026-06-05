@@ -78,7 +78,7 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={t('settings.title')} onBack={() => navigation.goBack()} />
 

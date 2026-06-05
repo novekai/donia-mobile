@@ -51,7 +51,7 @@ export function PrivacyScreen({ navigation, route }: RootStackScreenProps<'Priva
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader
         title={fromSendFlow ? t('privacy.titleSendFlow') : t('privacy.titleDefault')}

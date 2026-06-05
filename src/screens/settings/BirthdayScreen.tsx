@@ -37,7 +37,7 @@ export function BirthdayScreen({ navigation }: RootStackScreenProps<'Birthday'>)
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={t('birthday.title')} onBack={() => navigation.goBack()} />
 

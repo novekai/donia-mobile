@@ -26,15 +26,15 @@ export function BirthdayStrip({ people = [], onSeeAll, onPick }: Props) {
 
   if (people.length === 0) {
     return (
-      <View style={[styles.wrap, styles.empty]}>
+      <Pressable onPress={onSeeAll} style={[styles.wrap, styles.empty]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Fêtes du jour 🎉</Text>
           <Text style={styles.sub}>
-            Quand un proche fête son anniversaire, il apparaît ici.
+            Quand un proche fête son anniversaire, il apparaît ici. Touche pour voir tout.
           </Text>
         </View>
         <Text style={styles.giftEmoji}>🎂</Text>
-      </View>
+      </Pressable>
     );
   }
 

@@ -51,7 +51,7 @@ export function NotificationsPrefScreen({ navigation }: RootStackScreenProps<'No
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={t('notifPref.title')} onBack={() => navigation.goBack()} />
 

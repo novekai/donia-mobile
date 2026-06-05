@@ -17,6 +17,7 @@ import { getApiErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
 import { PhoneInput, DEFAULT_COUNTRY, toE164, type Country } from '../../components/ui/PhoneInput';
 import { PasswordInput } from '../../components/ui/PasswordInput';
+import { DateOfBirthPicker } from '../../components/ui/DateOfBirthPicker';
 
 type Sex = 'F' | 'H' | 'A';
 
@@ -123,36 +124,20 @@ export function SignupScreen({ navigation }: RootStackScreenProps<'Signup'>) {
         />
 
         <View style={{ marginTop: spacing.sm }} />
-        <Text style={styles.fieldLabel}>Date de naissance (optionnel)</Text>
-        <View style={styles.dobRow}>
-          <TextInput
-            placeholder="Jour"
-            placeholderTextColor={colors.ink3}
-            keyboardType="number-pad"
-            maxLength={2}
-            value={dobDay}
-            onChangeText={(v) => setDobDay(v.replace(/\D/g, ''))}
-            style={styles.dobInput}
-          />
-          <TextInput
-            placeholder="Mois"
-            placeholderTextColor={colors.ink3}
-            keyboardType="number-pad"
-            maxLength={2}
-            value={dobMonth}
-            onChangeText={(v) => setDobMonth(v.replace(/\D/g, ''))}
-            style={styles.dobInput}
-          />
-          <TextInput
-            placeholder="Année"
-            placeholderTextColor={colors.ink3}
-            keyboardType="number-pad"
-            maxLength={4}
-            value={dobYear}
-            onChangeText={(v) => setDobYear(v.replace(/\D/g, ''))}
-            style={styles.dobInput}
-          />
-        </View>
+        <Text style={styles.fieldLabel}>Date de naissance</Text>
+        <DateOfBirthPicker
+          day={dobDay}
+          month={dobMonth}
+          year={dobYear}
+          onChange={({ day, month, year }) => {
+            setDobDay(day);
+            setDobMonth(month);
+            setDobYear(year);
+          }}
+        />
+        <Text style={styles.dobWarn}>
+          ⚠️ Choisis ta vraie date — elle sera verrouillée après l'inscription et ne pourra plus être modifiée.
+        </Text>
 
         <View style={{ marginTop: spacing.sm }} />
         <PhoneInput
@@ -208,6 +193,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.displayMedium, fontSize: 28, color: colors.ink, letterSpacing: -0.6, lineHeight: 30 },
   subtitle: { fontFamily: fonts.displayItalic, fontSize: 13, color: colors.ink2, marginTop: 4 },
   fieldLabel: { fontFamily: fonts.displayItalic, fontSize: 12, color: colors.ink2, marginBottom: 5, marginTop: spacing.xs },
+  dobWarn: { marginTop: 8, fontFamily: fonts.displayItalic, fontSize: 11, color: colors.coralDeep, lineHeight: 16 },
   dobRow: { flexDirection: 'row', gap: 6 },
   dobBox: { flex: 1, height: 46, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: 'rgba(42,15,26,0.08)', justifyContent: 'center', paddingHorizontal: 12 },
   dobPlaceholder: { fontFamily: fonts.bodyRegular, fontSize: 14, color: colors.ink3 },

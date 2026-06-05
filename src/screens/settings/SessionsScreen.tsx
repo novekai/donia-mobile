@@ -130,7 +130,7 @@ export function SessionsScreen({ navigation, route }: RootStackScreenProps<'Sess
   const others = sessions.filter((s) => !s.isCurrent);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={variant === 'sessions' ? t('sessions.titleSessions') : t('sessions.titleDevices')} onBack={() => navigation.goBack()} />
 

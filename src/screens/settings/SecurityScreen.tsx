@@ -86,7 +86,7 @@ export function SecurityScreen({ navigation }: RootStackScreenProps<'Security'>)
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={t('security.title')} onBack={() => navigation.goBack()} />
 

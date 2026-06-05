@@ -55,7 +55,7 @@ export function LanguageScreen({ navigation }: RootStackScreenProps<'Language'>)
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={t('language.title')} onBack={() => navigation.goBack()} />
 

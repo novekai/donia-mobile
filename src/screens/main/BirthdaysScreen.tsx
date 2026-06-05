@@ -44,7 +44,7 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title="Fêtes du jour 🎉" onBack={() => navigation.goBack()} />
 

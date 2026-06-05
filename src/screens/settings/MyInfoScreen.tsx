@@ -70,7 +70,7 @@ export function MyInfoScreen({ navigation }: RootStackScreenProps<'MyInfo'>) {
 
   if (meQuery.isLoading) {
     return (
-      <ScreenContainer>
+      <ScreenContainer tabBar="home">
         <FunBackground palette="cream" density="sparse" />
         <ScreenHeader title="Mes informations" onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -82,7 +82,7 @@ export function MyInfoScreen({ navigation }: RootStackScreenProps<'MyInfo'>) {
 
   if (meQuery.isError || !meQuery.data) {
     return (
-      <ScreenContainer>
+      <ScreenContainer tabBar="home">
         <FunBackground palette="cream" density="sparse" />
         <ScreenHeader title="Mes informations" onBack={() => navigation.goBack()} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -122,7 +122,7 @@ export function MyInfoScreen({ navigation }: RootStackScreenProps<'MyInfo'>) {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title="Mes informations" onBack={() => navigation.goBack()} />
 

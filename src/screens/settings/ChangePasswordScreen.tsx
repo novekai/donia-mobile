@@ -46,7 +46,7 @@ export function ChangePasswordScreen({ navigation }: RootStackScreenProps<'Chang
   }
 
   return (
-    <ScreenContainer avoidKeyboard>
+    <ScreenContainer avoidKeyboard tabBar="home">
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title={t('changePassword.title')} onBack={() => navigation.goBack()} />
 
