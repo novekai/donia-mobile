@@ -18,7 +18,7 @@ type Filter = 'today' | 'tomorrow' | 'after';
 const FILTERS: { key: Filter; label: string; emoji: string }[] = [
   { key: 'today', label: "Aujourd'hui", emoji: '🎂' },
   { key: 'tomorrow', label: 'Demain', emoji: '✨' },
-  { key: 'after', label: 'Après-demain', emoji: '🗓️' },
+  { key: 'after', label: 'Après-d.', emoji: '🗓️' },
 ];
 
 export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'>) {
@@ -48,7 +48,7 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title="Fêtes du jour 🎉" onBack={() => navigation.goBack()} />
 
-      {/* Filtres */}
+      {/* Filtres — 3 chips de largeur egale sur une seule ligne */}
       <View style={styles.filters}>
         {FILTERS.map((f) => {
           const on = f.key === filter;
@@ -59,7 +59,7 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
               onPress={() => setFilter(f.key)}
               style={[styles.chip, on && { backgroundColor: colors.coral, borderColor: colors.coral }]}
             >
-              <Text style={[styles.chipText, on && { color: colors.bg }]}>
+              <Text style={[styles.chipText, on && { color: colors.bg }]} numberOfLines={1}>
                 {f.emoji} {f.label}
               </Text>
               {n > 0 && (
@@ -134,9 +134,9 @@ export function BirthdaysScreen({ navigation }: RootStackScreenProps<'Birthdays'
 }
 
 const styles = StyleSheet.create({
-  filters: { paddingHorizontal: 22, paddingTop: 14, flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
-  chipText: { fontFamily: fonts.displaySemiBold, fontSize: 12, color: colors.ink },
+  filters: { paddingHorizontal: 22, paddingTop: 14, flexDirection: 'row', gap: 6 },
+  chip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 8, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  chipText: { fontFamily: fonts.displaySemiBold, fontSize: 12, color: colors.ink, textAlign: 'center' },
   chipBadge: { paddingHorizontal: 6, borderRadius: 99, minWidth: 18, alignItems: 'center', backgroundColor: 'rgba(244,72,111,0.18)' },
   chipBadgeText: { fontFamily: fonts.bodyBold, fontSize: 10, color: colors.coralDeep },
 
