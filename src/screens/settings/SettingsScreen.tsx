@@ -49,7 +49,7 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
     {
       title: t('settings.sectionLegal'),
       items: [
-        { emoji: '💬', label: t('settings.helpCenter'), sub: t('settings.helpCenterSub'), color: colors.mint, url: 'mailto:contact@doniia.com?subject=Aide%20Donia' },
+        { emoji: '💬', label: t('settings.helpCenter'), sub: t('settings.helpCenterSub'), color: colors.mint, route: 'Help' },
         { emoji: '📄', label: t('settings.cgu'), sub: t('settings.cguSub'), color: colors.ink2, url: 'https://doniia.com/cgu' },
         { emoji: '🔐', label: t('settings.privacyPolicy'), sub: t('settings.privacyPolicySub'), color: colors.ink2, url: 'https://doniia.com/confidentialite' },
         { emoji: 'ℹ️', label: t('settings.about'), sub: t('settings.aboutSub'), color: colors.indigo, url: 'https://doniia.com' },

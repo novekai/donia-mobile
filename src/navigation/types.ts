@@ -40,6 +40,7 @@ export type RootStackParams = {
   // Modal / push above tabs
   Notifications: undefined;
   Birthdays: undefined;
+  Help: undefined;
   TopUpMethod: undefined;
   TopUpMobileMoney: undefined;
   TopUpCode: undefined;
