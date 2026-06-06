@@ -30,8 +30,11 @@ import { topupCode, previewTopupCode } from '../../api/wallet';
 import { getMe } from '../../api/me';
 import { getApiErrorMessage } from '../../api/client';
 
+// Le backend genere un code au format DON-2026-XXXXX ou XXXXX = 5 caracteres
+// alphanumeriques. Le mobile affiche les 5 cases + le prefixe en label visuel.
+// On accepte aussi le format complet si l'utilisateur colle (auto-strip du prefixe).
 const CODE_PREFIX = 'DON-2026-';
-const CODE_LENGTH = 8;
+const CODE_LENGTH = 5;
 const EMPTY_CODE = Array.from({ length: CODE_LENGTH }, () => '');
 
 const OCCASION_EMOJI: Record<string, string> = {
@@ -93,13 +96,34 @@ export function TopUpCodeScreen({ navigation }: RootStackScreenProps<'TopUpCode'
   });
 
   function setCharAt(index: number, char: string) {
-    const upper = char.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    // Strip auto si l'utilisateur colle le code complet "DON-2026-PCCVH" : on
+    // garde uniquement les 5 derniers caracteres alphanumeriques.
+    const cleaned = char
+      .replace(new RegExp(`^${CODE_PREFIX.replace(/-/g, '\\-')}`, 'i'), '')
+      .replace(/-/g, '')
+      .replace(/[^A-Za-z0-9]/g, '')
+      .toUpperCase();
+
+    // Cas du paste : plusieurs caracteres d'un coup -> on dispatche dans les cases
+    if (cleaned.length > 1) {
+      setCode(() => {
+        const next = Array.from({ length: CODE_LENGTH }, () => '');
+        for (let i = 0; i < Math.min(cleaned.length, CODE_LENGTH); i++) {
+          next[i] = cleaned[i] ?? '';
+        }
+        return next;
+      });
+      const focusAt = Math.min(cleaned.length, CODE_LENGTH - 1);
+      inputsRef.current[focusAt]?.focus();
+      return;
+    }
+
     setCode((prev) => {
       const next = [...prev];
-      next[index] = upper.slice(-1);
+      next[index] = cleaned.slice(-1);
       return next;
     });
-    if (upper && index < CODE_LENGTH - 1) {
+    if (cleaned && index < CODE_LENGTH - 1) {
       inputsRef.current[index + 1]?.focus();
     }
   }
@@ -171,9 +195,12 @@ export function TopUpCodeScreen({ navigation }: RootStackScreenProps<'TopUpCode'
         <Text style={styles.title}>
           Entre ton <Text style={styles.titleItalic}>code de retrait</Text>
         </Text>
-        <Text style={styles.subtitle}>8 caractères, reçus par email ou WhatsApp avec ta carte.</Text>
+        <Text style={styles.subtitle}>
+          5 caractères après <Text style={styles.prefixInline}>{CODE_PREFIX}</Text> (reçu par email ou WhatsApp).
+        </Text>
 
         <View style={styles.codeRow}>
+          <Text style={styles.codePrefix}>{CODE_PREFIX}</Text>
           {code.map((c, i) => (
             <TextInput
               key={i}
@@ -183,7 +210,7 @@ export function TopUpCodeScreen({ navigation }: RootStackScreenProps<'TopUpCode'
               value={c}
               onChangeText={(v) => setCharAt(i, v)}
               onKeyPress={({ nativeEvent }) => onKey(i, nativeEvent.key)}
-              maxLength={1}
+              maxLength={CODE_LENGTH}
               autoCapitalize="characters"
               autoCorrect={false}
               selectTextOnFocus
@@ -299,7 +326,9 @@ const styles = StyleSheet.create({
   },
   titleItalic: { fontFamily: fonts.displayItalic, color: colors.coral },
   subtitle: { fontSize: 13, color: colors.ink2, textAlign: 'center', marginTop: 6 },
-  codeRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, marginTop: 26 },
+  codeRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, marginTop: 26, alignItems: 'center' },
+  codePrefix: { fontFamily: fonts.bodyBold, fontSize: 15, color: colors.ink2, marginRight: 4 },
+  prefixInline: { fontFamily: fonts.bodyBold, color: colors.coralDeep },
   codeInput: {
     flex: 1,
     aspectRatio: 0.78,
