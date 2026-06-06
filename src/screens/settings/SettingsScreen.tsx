@@ -21,7 +21,36 @@ type Item = {
   url?: string;
   badge?: string;
   comingSoon?: boolean;
+  // helpDialog : ouvre un popup pour choisir entre support email et WhatsApp
+  helpDialog?: boolean;
 };
+
+const SUPPORT_EMAIL = 'contact@doniia.com';
+const SUPPORT_WHATSAPP_NUMBER = '+22969949481';
+
+async function openSupportWhatsApp() {
+  const digits = SUPPORT_WHATSAPP_NUMBER.replace(/\D/g, '');
+  const deepLink = `whatsapp://send?phone=${digits}&text=${encodeURIComponent('Bonjour, j\'ai besoin d\'aide sur Donia.')}`;
+  const webFallback = `https://wa.me/${digits}?text=${encodeURIComponent('Bonjour, j\'ai besoin d\'aide sur Donia.')}`;
+  try {
+    const ok = await Linking.canOpenURL(deepLink);
+    if (ok) { await Linking.openURL(deepLink); return; }
+    await Linking.openURL(webFallback);
+  } catch {
+    Alert.alert('WhatsApp indisponible', `Contacte-nous au ${SUPPORT_WHATSAPP_NUMBER}`);
+  }
+}
+
+async function openSupportEmail() {
+  const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Aide Donia')}`;
+  try {
+    const ok = await Linking.canOpenURL(url);
+    if (ok) { await Linking.openURL(url); return; }
+    Alert.alert("Aucune app mail", `Écris-nous à ${SUPPORT_EMAIL}`);
+  } catch {
+    Alert.alert("Aucune app mail", `Écris-nous à ${SUPPORT_EMAIL}`);
+  }
+}
 type Section = { title: string; items: Item[] };
 
 export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>) {
@@ -49,7 +78,7 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
     {
       title: t('settings.sectionLegal'),
       items: [
-        { emoji: '💬', label: t('settings.helpCenter'), sub: t('settings.helpCenterSub'), color: colors.mint, url: 'mailto:contact@doniia.com?subject=Aide%20Donia' },
+        { emoji: '💬', label: t('settings.helpCenter'), sub: t('settings.helpCenterSub'), color: colors.mint, helpDialog: true },
         { emoji: '📄', label: t('settings.cgu'), sub: t('settings.cguSub'), color: colors.ink2, url: 'https://doniia.com/cgu' },
         { emoji: '🔐', label: t('settings.privacyPolicy'), sub: t('settings.privacyPolicySub'), color: colors.ink2, url: 'https://doniia.com/confidentialite' },
         { emoji: 'ℹ️', label: t('settings.about'), sub: t('settings.aboutSub'), color: colors.indigo, url: 'https://doniia.com' },
@@ -59,6 +88,19 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
   function onPressItem(it: Item) {
     if (it.route) {
       navigation.navigate(it.route as never);
+      return;
+    }
+    if (it.helpDialog) {
+      // Popup pour choisir le canal de contact (email ou WhatsApp).
+      Alert.alert(
+        '💬  Centre d\'aide',
+        'Comment veux-tu nous contacter ?',
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: '✉️  Email', onPress: openSupportEmail },
+          { text: '💬  WhatsApp', onPress: openSupportWhatsApp },
+        ],
+      );
       return;
     }
     if (it.url) {
