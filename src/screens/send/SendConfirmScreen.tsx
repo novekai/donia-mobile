@@ -132,12 +132,12 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
         await Linking.openURL(res.paymentUrl);
         queryClient.invalidateQueries({ queryKey: ['me'] });
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        navigation.replace('TxDetail', { txId: res.card.id });
+        navigation.replace('TxDetail', { cardId: res.card.id });
       } else {
         const res = await createCard(body);
         queryClient.invalidateQueries({ queryKey: ['me'] });
         queryClient.invalidateQueries({ queryKey: ['transactions'] });
-        navigation.replace('TxDetail', { txId: res.card.id });
+        navigation.replace('TxDetail', { cardId: res.card.id });
       }
     } catch (e) {
       Alert.alert('Envoi échoué', getApiErrorMessage(e));

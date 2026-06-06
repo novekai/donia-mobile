@@ -55,7 +55,7 @@ export type RootStackParams = {
   Customize: { categoryKey?: string; recipientPhone?: string; recipientName?: string; amount?: string };
   Receive: { code?: string };
   RedeemSuccess: { amount?: string; sender?: string };
-  TxDetail: { txId?: string };
+  TxDetail: { txId?: string; cardId?: string };
   Cagnotte: undefined;
   Referral: undefined;
   MyInfo: undefined;

@@ -186,7 +186,7 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
                     const statusLabel = STATUS_LABELS[t.status];
                     const dim = t.status !== 'SUCCESS';
                     return (
-                      <Pressable key={t.id} onPress={() => navigation.navigate('TxDetail', { txId: t.id })}>
+                      <Pressable key={t.id} onPress={() => navigation.navigate('TxDetail', { txId: t.id, cardId: t.cardId ?? undefined })}>
                         <View style={[styles.row, i < g.items.length - 1 && styles.rowDivider]}>
                           <View style={[styles.avatar, { backgroundColor: meta.color }, dim && { opacity: 0.55 }]}>
                             <Text style={styles.avatarText}>{meta.initial}</Text>

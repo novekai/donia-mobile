@@ -110,7 +110,11 @@ type StateMeta = {
 
 export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDetail'>) {
   const { t } = useTranslation();
-  const txId = route.params?.txId;
+  // On reçoit soit un cardId direct (cas le plus propre, depuis HistoryScreen),
+  // soit un txId qu'on utilise en fallback si on n'a pas le cardId.
+  // (NB : txId n'est PAS un cardId — c'est l'ID de la transaction. Pour rétro-
+  // compat on essaie quand même getCard(txId) si seul txId est fourni.)
+  const cardId = route.params?.cardId ?? route.params?.txId;
   const queryClient = useQueryClient();
   const [resending, setResending] = React.useState(false);
 
@@ -149,25 +153,20 @@ export function TxDetailScreen({ navigation, route }: RootStackScreenProps<'TxDe
   };
 
   const cardQuery = useQuery({
-    queryKey: ['card', txId],
-    queryFn: () => (txId ? getCard(txId).then((r) => r.card) : Promise.reject(new Error('No txId'))),
-    enabled: Boolean(txId),
-    // While the card is still CREATED (waiting for Mobile Money payment), poll
-    // every 5 s so the screen flips to "Envoi réussi" automatically the moment
-    // the FedaPay webhook lands.
+    queryKey: ['card', cardId],
+    queryFn: () => (cardId ? getCard(cardId).then((r) => r.card) : Promise.reject(new Error('No cardId'))),
+    enabled: Boolean(cardId),
     refetchInterval: (q) => (q.state.data?.status === 'CREATED' ? 5000 : false),
   });
 
-  // When the user returns to the app (e.g. from the FedaPay payment page in
-  // the browser), refetch immediately instead of waiting up to 5 seconds.
   React.useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && txId) {
-        queryClient.invalidateQueries({ queryKey: ['card', txId] });
+      if (state === 'active' && cardId) {
+        queryClient.invalidateQueries({ queryKey: ['card', cardId] });
       }
     });
     return () => sub.remove();
-  }, [txId, queryClient]);
+  }, [cardId, queryClient]);
 
   async function onResend() {
     if (!cardQuery.data) return;

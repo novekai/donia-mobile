@@ -1,6 +1,6 @@
 // Wallet — solde + 2 poches (Principal/Parrainage) + carte parrainage (live API)
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl, Alert } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
@@ -76,7 +76,13 @@ export function WalletScreen({ navigation }: RootStackScreenProps<'Wallet'>) {
             amount={fmt(total)}
             label="Disponible"
             onTopUp={() => navigation.navigate('TopUpMethod')}
-            onWithdraw={() => {}}
+            onWithdraw={() => {
+              Alert.alert(
+                'Retrait Mobile Money',
+                "Le retrait depuis ton solde arrive bientôt. Pour le moment, tu peux convertir une carte reçue directement en Mobile Money via son code de retrait.",
+                [{ text: 'OK' }],
+              );
+            }}
           />
         </View>
 
