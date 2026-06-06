@@ -183,14 +183,6 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
   type RowEx = { label: string; sub: string; emoji: string; color: string; action: RowAction; badge?: string };
   type GroupEx = { items: RowEx[] };
 
-  const openHelp = () => {
-    const url = 'mailto:contact@doniia.com?subject=Aide%20Donia';
-    Linking.canOpenURL(url).then((ok) => {
-      if (ok) Linking.openURL(url);
-      else Alert.alert('Contact', 'Écris-nous à contact@doniia.com');
-    });
-  };
-
   const groups: GroupEx[] = [
     { items: [
       { label: 'Mon solde', sub: `${balance.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA`, emoji: '💰', color: colors.mango, action: { kind: 'route', route: 'Wallet' } },
@@ -208,7 +200,7 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
     { items: [
       { label: 'Sécurité', sub: 'Mot de passe · 2FA · sessions', emoji: '🔒', color: colors.plum, action: { kind: 'route', route: 'Security' } },
       { label: 'Paramètres', sub: 'Confidentialité · langue · anniversaire', emoji: '⚙️', color: colors.ink2, action: { kind: 'route', route: 'Settings' } },
-      { label: 'Aide & support', sub: 'FAQ · nous contacter', emoji: '💬', color: colors.indigo, action: { kind: 'fn', onPress: openHelp } },
+      { label: 'Aide & support', sub: 'FAQ · nous contacter', emoji: '💬', color: colors.indigo, action: { kind: 'route', route: 'Help' } },
     ]},
   ];
 
