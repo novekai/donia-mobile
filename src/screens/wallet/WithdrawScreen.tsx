@@ -2,7 +2,7 @@
 // V1 : la demande est créée en PENDING, traitée manuellement côté admin.
 // V1.1 : intégration FedaPay payout pour automatiser.
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
@@ -25,6 +25,7 @@ const OPERATORS: { key: string; label: string; emoji: string; color: string }[] 
   { key: 'moov', label: 'Moov', emoji: '🔵', color: colors.indigo },
   { key: 'orange', label: 'Orange', emoji: '🟠', color: colors.coral },
   { key: 'wave', label: 'Wave', emoji: '💙', color: colors.mint },
+  { key: 'bank_card', label: 'Carte bancaire', emoji: '💳', color: colors.plum },
 ];
 
 function fmt(n: number): string {
@@ -43,7 +44,10 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
   const [operator, setOperator] = useState<string>('mtn');
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [localPhone, setLocalPhone] = useState(user?.phone?.replace(/^\+\d{1,3}/, '') ?? '');
+  const [accountNumber, setAccountNumber] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const isBankCard = operator === 'bank_card';
 
   // Pré-remplit avec le téléphone du user au mount si pas encore rempli
   React.useEffect(() => {
@@ -56,7 +60,10 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
   const amountNum = Number(raw || '0');
   const formatted = fmt(amountNum);
   const enough = balance >= amountNum;
-  const valid = amountNum >= 500 && enough && localPhone.replace(/\D/g, '').length >= 8;
+  const destinationValid = isBankCard
+    ? accountNumber.replace(/\s/g, '').length >= 8
+    : localPhone.replace(/\D/g, '').length >= 8;
+  const valid = amountNum > 0 && enough && destinationValid;
 
   async function onConfirm() {
     if (loading || !valid) return;
@@ -73,17 +80,18 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
     }
     setLoading(true);
     try {
-      const phoneE164 = toE164(country, localPhone);
       const res = await withdraw({
         amount: amountNum,
         operator,
-        phoneNumber: phoneE164,
+        ...(isBankCard
+          ? { accountNumber: accountNumber.replace(/\s/g, '') }
+          : { phoneNumber: toE164(country, localPhone) }),
       });
       queryClient.invalidateQueries({ queryKey: ['me'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       Alert.alert(
         '✅ Demande envoyée',
-        res.message ?? 'Ton Mobile Money sera crédité sous 24-48h ouvrées.',
+        res.message ?? "Ton retrait sera traité sous 24-48h.",
         [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (e) {
@@ -141,9 +149,6 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
             })}
           </View>
 
-          {amountNum > 0 && amountNum < 500 && (
-            <Text style={styles.warn}>⚠️ Le minimum est 500 FCFA.</Text>
-          )}
           {amountNum > 0 && !enough && (
             <Text style={styles.warn}>⚠️ Solde insuffisant ({fmt(balance)} FCFA disponibles).</Text>
           )}
@@ -172,16 +177,35 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
           })}
         </View>
 
-        {/* Numéro à créditer */}
-        <Text style={styles.sectionLabel}>NUMÉRO À CRÉDITER</Text>
-        <PhoneInput
-          country={country}
-          onCountryChange={setCountry}
-          localNumber={localPhone}
-          onLocalNumberChange={setLocalPhone}
-        />
+        {/* Destinataire : Mobile Money OU carte bancaire selon operator */}
+        <Text style={styles.sectionLabel}>
+          {isBankCard ? 'NUMÉRO DE CARTE OU IBAN' : 'NUMÉRO MOBILE MONEY À CRÉDITER'}
+        </Text>
+        {isBankCard ? (
+          <View style={styles.cardInputWrap}>
+            <Text style={styles.cardInputEmoji}>💳</Text>
+            <TextInput
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              placeholder="FR76 1234 5678 9012 3456 7890 123"
+              placeholderTextColor={colors.ink3}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={styles.cardInput}
+            />
+          </View>
+        ) : (
+          <PhoneInput
+            country={country}
+            onCountryChange={setCountry}
+            localNumber={localPhone}
+            onLocalNumberChange={setLocalPhone}
+          />
+        )}
         <Text style={styles.hint}>
-          Tu recevras tes {formatted || '0'} FCFA sur ce numéro {OPERATORS.find((o) => o.key === operator)?.label ?? ''} sous 24-48h ouvrées.
+          {isBankCard
+            ? `Tu recevras tes ${formatted || '0'} FCFA sur ce compte bancaire sous 2-5 jours ouvrés.`
+            : `Tu recevras tes ${formatted || '0'} FCFA sur ce numéro ${OPERATORS.find((o) => o.key === operator)?.label ?? ''} sous 24-48h ouvrées.`}
         </Text>
       </ScrollView>
 
@@ -223,6 +247,10 @@ const styles = StyleSheet.create({
 
   hint: { marginTop: 8, fontSize: 11, color: colors.ink3, fontStyle: 'italic', lineHeight: 16 },
   warn: { marginTop: 8, fontSize: 12, color: colors.coralDeep, textAlign: 'center', fontFamily: fonts.bodyMedium },
+
+  cardInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, height: 50, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft },
+  cardInputEmoji: { fontSize: 22 },
+  cardInput: { flex: 1, fontFamily: 'monospace', fontSize: 15, color: colors.ink, letterSpacing: 0.5 },
 
   footer: { position: 'absolute', bottom: 28, left: 22, right: 22 },
 });

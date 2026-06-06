@@ -1,6 +1,6 @@
 // TopUpMethod — 2 cartes (Mobile Money / Code reçu) + tip + recharges récentes
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
@@ -84,6 +84,30 @@ export function TopUpMethodScreen({ navigation }: RootStackScreenProps<'TopUpMet
                 <View style={{ flex: 1 }}>
                   <Text style={styles.optTitle}>Mobile Money</Text>
                   <Text style={styles.optSub}>MTN, Moov, Orange, Wave & co · gratuit</Text>
+                </View>
+                <IconChevR size={18} color={colors.bg} />
+              </BrandGradient>
+            </Pressable>
+          </Animated.View>
+
+          {/* Carte bancaire */}
+          <Animated.View style={[bobB, { marginTop: 10 }]}>
+            <Pressable
+              onPress={() =>
+                Alert.alert(
+                  'Recharge par carte bancaire',
+                  "Le paiement par carte bancaire (Visa, Mastercard) arrive très bientôt sur Donia. En attendant, recharge via Mobile Money — c'est instantané et gratuit.",
+                  [{ text: 'OK' }],
+                )
+              }
+            >
+              <BrandGradient variant="plum" style={[styles.option, shadow.indigo]}>
+                <View style={[styles.optIcon, { backgroundColor: 'rgba(253,247,246,0.18)' }]}>
+                  <Text style={{ fontSize: 24 }}>💳</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.optTitle}>Carte bancaire</Text>
+                  <Text style={styles.optSub}>Visa, Mastercard · paiement sécurisé via FedaPay</Text>
                 </View>
                 <IconChevR size={18} color={colors.bg} />
               </BrandGradient>

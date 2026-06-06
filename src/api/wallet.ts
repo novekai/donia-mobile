@@ -37,7 +37,13 @@ export function getRecentTopups(): Promise<{ recent: Transaction[] }> {
   return apiGet('/v1/wallet/topup/recent');
 }
 
-export function withdraw(body: { amount: number; operator: string; phoneNumber: string }) {
+// Retrait flexible : phoneNumber pour Mobile Money OU accountNumber pour carte bancaire / IBAN.
+export function withdraw(body: {
+  amount: number;
+  operator: string;          // 'mtn', 'moov', 'orange', 'wave', 'bank_card'
+  phoneNumber?: string;      // E.164 si Mobile Money
+  accountNumber?: string;    // IBAN ou numero de carte si bank_card
+}) {
   return apiPost<{ ok: true; txId: string; status: 'PENDING'; message: string }>(
     '/v1/wallet/withdraw',
     body,

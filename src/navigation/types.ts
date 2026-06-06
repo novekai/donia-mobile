@@ -42,7 +42,7 @@ export type RootStackParams = {
   Birthdays: undefined;
   Help: undefined;
   TopUpMethod: undefined;
-  TopUpMobileMoney: undefined;
+  TopUpMobileMoney: { method?: 'mobile_money' | 'card' } | undefined;
   TopUpCode: undefined;
   Withdraw: undefined;
   CardGallery: undefined;
