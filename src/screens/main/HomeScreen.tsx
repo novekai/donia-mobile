@@ -141,7 +141,7 @@ export function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
           <BalanceCard
             amount={fmtFCFA(balance)}
             onTopUp={() => navigation.navigate('TopUpMethod')}
-            onWithdraw={() => {}}
+            onWithdraw={() => navigation.navigate('Withdraw')}
           />
         </View>
 

@@ -36,6 +36,7 @@ import { BirthdaysScreen } from '../screens/main/BirthdaysScreen';
 import { TopUpMethodScreen } from '../screens/wallet/TopUpMethodScreen';
 import { TopUpMobileMoneyScreen } from '../screens/wallet/TopUpMobileMoneyScreen';
 import { TopUpCodeScreen } from '../screens/wallet/TopUpCodeScreen';
+import { WithdrawScreen } from '../screens/wallet/WithdrawScreen';
 
 // Send flow
 import { CardGalleryScreen } from '../screens/send/CardGalleryScreen';
@@ -128,6 +129,7 @@ export function RootNavigator() {
         <Stack.Screen name="TopUpMethod" component={TopUpMethodScreen} />
         <Stack.Screen name="TopUpMobileMoney" component={TopUpMobileMoneyScreen} />
         <Stack.Screen name="TopUpCode" component={TopUpCodeScreen} />
+        <Stack.Screen name="Withdraw" component={WithdrawScreen} />
         <Stack.Screen name="CardGallery" component={CardGalleryScreen} />
         <Stack.Screen name="CardPreview" component={CardPreviewScreen} />
         <Stack.Screen name="SendRecipient" component={SendRecipientScreen} />

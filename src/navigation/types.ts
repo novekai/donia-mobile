@@ -44,6 +44,7 @@ export type RootStackParams = {
   TopUpMethod: undefined;
   TopUpMobileMoney: undefined;
   TopUpCode: undefined;
+  Withdraw: undefined;
   CardGallery: undefined;
   CardPreview: { themeKey?: string };
   SendCategory: undefined;

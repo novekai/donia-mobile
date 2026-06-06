@@ -36,3 +36,10 @@ export function previewTopupCode(code: string): Promise<CodePreview> {
 export function getRecentTopups(): Promise<{ recent: Transaction[] }> {
   return apiGet('/v1/wallet/topup/recent');
 }
+
+export function withdraw(body: { amount: number; operator: string; phoneNumber: string }) {
+  return apiPost<{ ok: true; txId: string; status: 'PENDING'; message: string }>(
+    '/v1/wallet/withdraw',
+    body,
+  );
+}

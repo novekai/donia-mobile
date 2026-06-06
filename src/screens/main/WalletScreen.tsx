@@ -76,13 +76,7 @@ export function WalletScreen({ navigation }: RootStackScreenProps<'Wallet'>) {
             amount={fmt(total)}
             label="Disponible"
             onTopUp={() => navigation.navigate('TopUpMethod')}
-            onWithdraw={() => {
-              Alert.alert(
-                'Retrait Mobile Money',
-                "Le retrait depuis ton solde arrive bientôt. Pour le moment, tu peux convertir une carte reçue directement en Mobile Money via son code de retrait.",
-                [{ text: 'OK' }],
-              );
-            }}
+            onWithdraw={() => navigation.navigate('Withdraw')}
           />
         </View>
 
