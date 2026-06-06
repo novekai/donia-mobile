@@ -49,7 +49,7 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
   // === Cas 1 : Vérification validée ===
   if (status === 'APPROVED' && latest) {
     return (
-      <ScreenContainer tabBar="home">
+      <ScreenContainer>
         <FunBackground palette="cream" density="sparse" />
         <ScreenHeader title="Vérification d'identité" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 32 }}>
@@ -74,7 +74,7 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
   // === Cas 2 : Vérification en cours (PENDING) ===
   if (status === 'PENDING' && latest) {
     return (
-      <ScreenContainer tabBar="home">
+      <ScreenContainer>
         <FunBackground palette="cream" density="sparse" />
         <ScreenHeader title="Vérification d'identité" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 32 }}>
@@ -117,7 +117,7 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
   // === Cas 3 : Vérification refusée (REJECTED) ===
   if (status === 'REJECTED' && latest) {
     return (
-      <ScreenContainer tabBar="home">
+      <ScreenContainer>
         <FunBackground palette="cream" density="sparse" />
         <ScreenHeader title="Vérification d'identité" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 24 }}>
@@ -153,7 +153,7 @@ export function KYCScreen({ navigation }: RootStackScreenProps<'KYC'>) {
 
   // === Cas 4 : Première soumission (NONE / chargement) ===
   return (
-    <ScreenContainer tabBar="home">
+    <ScreenContainer>
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title="Vérification d'identité" onBack={() => navigation.goBack()} />
 
