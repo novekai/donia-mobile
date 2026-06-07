@@ -1,18 +1,25 @@
-// TopUpMobileMoney — montants chips + 10 pays + opérateurs + recap
+// TopUpMobileMoney — recharge solde via MM (FedaPay/KKiaPay selon provider actif)
+// Presets + saisie manuelle (keypad), solde live, ouverture WebView FedaPay/KKiaPay.
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert, Linking } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
 import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { IconCheck } from '../../components/ui/Icons';
 import { usePulse } from '../../theme/animations';
 import { colors, radius } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
+import { topupMobileMoney } from '../../api/wallet';
+import { getMe } from '../../api/me';
+import { getApiErrorMessage } from '../../api/client';
 
-const AMOUNTS = ['5 000', '10 000', '25 000', '50 000', '100 000', 'Autre'];
+const PRESETS = ['500', '1 000', '5 000', '10 000', '25 000'];
+
 const COUNTRIES = [
   { code: 'bj', name: 'Bénin', flag: '🇧🇯' },
   { code: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮' },
@@ -25,6 +32,7 @@ const COUNTRIES = [
   { code: 'gh', name: 'Ghana', flag: '🇬🇭' },
   { code: 'cm', name: 'Cameroun', flag: '🇨🇲' },
 ];
+
 const OPERATORS_BY_COUNTRY: Record<string, { id: string; name: string; color: string; ink?: string }[]> = {
   bj: [
     { id: 'mtn', name: 'MTN', color: colors.mango, ink: colors.indigo },
@@ -41,7 +49,10 @@ const OPERATORS_BY_COUNTRY: Record<string, { id: string; name: string; color: st
     { id: 'wave', name: 'Wave', color: colors.mint },
     { id: 'free', name: 'Free', color: colors.pink },
   ],
-  tg: [{ id: 'tmoney', name: 'T-Money', color: colors.mango, ink: colors.indigo }, { id: 'flooz', name: 'Flooz', color: colors.indigo }],
+  tg: [
+    { id: 'tmoney', name: 'T-Money', color: colors.mango, ink: colors.indigo },
+    { id: 'flooz', name: 'Flooz', color: colors.indigo },
+  ],
   bf: [{ id: 'orange', name: 'Orange', color: colors.coral }, { id: 'moov', name: 'Moov', color: colors.indigo }],
   ml: [{ id: 'orange', name: 'Orange', color: colors.coral }, { id: 'moov', name: 'Moov', color: colors.indigo }],
   ne: [{ id: 'airtel', name: 'Airtel', color: colors.coral }, { id: 'orange', name: 'Orange', color: colors.coral }],
@@ -50,41 +61,116 @@ const OPERATORS_BY_COUNTRY: Record<string, { id: string; name: string; color: st
   cm: [{ id: 'mtn', name: 'MTN', color: colors.mango, ink: colors.indigo }, { id: 'orange', name: 'Orange', color: colors.coral }],
 };
 
+function fmt(n: number): string {
+  return Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
+}
+
 export function TopUpMobileMoneyScreen({ navigation }: RootStackScreenProps<'TopUpMobileMoney'>) {
-  const [amount, setAmount] = useState('10 000');
-  const [country, setCountry] = useState('bj');
+  const queryClient = useQueryClient();
+  const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
+  const balance = Number(meQuery.data?.user.wallet?.balancePrincipal ?? 0);
+  const userCountry = (meQuery.data?.user.country ?? 'BJ').toLowerCase();
+
+  const [raw, setRaw] = useState('10000');
+  const [country, setCountry] = useState(userCountry);
   const [operator, setOperator] = useState('mtn');
+  const [loading, setLoading] = useState(false);
   const pulseStyle = usePulse({ intensity: 0.15 });
 
   const operators = OPERATORS_BY_COUNTRY[country] || [];
+  const opName = operators.find((o) => o.id === operator)?.name ?? 'MTN';
+  const amountNum = Number(raw || '0');
+  const displayedAmount = fmt(amountNum);
+  const newBalance = balance + amountNum;
+  const valid = amountNum >= 100 && amountNum <= 500_000;
+
+  async function onSubmit() {
+    if (loading || !valid) return;
+    setLoading(true);
+    try {
+      const res = await topupMobileMoney({
+        amount: amountNum,
+        operator,
+        country: country.toUpperCase(),
+        currency: 'XOF',
+      });
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      if (res.paymentUrl) {
+        await Linking.openURL(res.paymentUrl);
+        Alert.alert(
+          '💰 Paiement Mobile Money',
+          "Termine le paiement dans la fenêtre qui s'est ouverte. Ton solde sera crédité dès confirmation.",
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
+      } else {
+        Alert.alert(
+          'Demande envoyée',
+          'Ton solde sera crédité dès confirmation du paiement.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
+      }
+    } catch (e) {
+      Alert.alert('Recharge impossible', getApiErrorMessage(e));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer avoidKeyboard>
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title="Recharger mon solde" onBack={() => navigation.goBack()} />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         <View style={{ paddingHorizontal: 22, paddingTop: 16 }}>
           <Text style={styles.kicker}>Solde actuel</Text>
-          <Text style={styles.balance}>125 800 <Text style={styles.balanceUnit}>FCFA</Text></Text>
+          <Text style={styles.balance}>{fmt(balance)} <Text style={styles.balanceUnit}>FCFA</Text></Text>
         </View>
 
         <View style={{ paddingHorizontal: 22, marginTop: 20 }}>
           <Text style={styles.section}>Choisis un montant</Text>
-          <View style={styles.amountGrid}>
-            {AMOUNTS.map((a) => {
-              const on = a === amount;
-              return (
+
+          {/* Affichage du montant en cours */}
+          <Card pad={16}>
+            <Text style={styles.amountInput}>
+              {displayedAmount} <Text style={styles.amountUnit}>FCFA</Text>
+            </Text>
+
+            <View style={styles.chipsRow}>
+              {PRESETS.map((p) => {
+                const on = p.replace(/\s/g, '') === raw;
+                return (
+                  <Pressable
+                    key={p}
+                    onPress={() => setRaw(p.replace(/\s/g, ''))}
+                    style={[styles.chip, on && { backgroundColor: colors.coral, borderColor: colors.coral }]}
+                  >
+                    <Text style={[styles.chipText, on && { color: colors.bg }]}>{p}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Clavier numerique */}
+            <View style={styles.keypadHint}>
+              <Text style={styles.keypadHintText}>Touche un preset ou saisis-le directement</Text>
+            </View>
+            <View style={styles.keypad}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 'X'].map((d, i) => (
                 <Pressable
-                  key={a}
-                  onPress={() => setAmount(a)}
-                  style={[styles.amountBtn, on && { backgroundColor: colors.coral, transform: [{ scale: 1.04 }] }]}
+                  key={`${d}-${i}`}
+                  onPress={() => {
+                    if (d === 'X') setRaw((r) => r.slice(0, -1));
+                    else setRaw((r) => (r === '0' ? '' : r) + String(d));
+                  }}
+                  style={[styles.key, d === 0 && i === 9 && { width: '66%' }]}
                 >
-                  <Text style={[styles.amountText, on && { color: colors.bg }, a === 'Autre' && { fontSize: 13 }]}>{a}</Text>
+                  <Text style={styles.keyText}>{d === 'X' ? '⌫' : d}</Text>
                 </Pressable>
-              );
-            })}
-          </View>
+              ))}
+            </View>
+          </Card>
         </View>
 
         <View style={{ marginTop: 20 }}>
@@ -145,25 +231,32 @@ export function TopUpMobileMoneyScreen({ navigation }: RootStackScreenProps<'Top
         </View>
 
         {/* Recap */}
-        <View style={{ paddingHorizontal: 22, marginTop: 16 }}>
-          <View style={styles.recap}>
-            <View style={styles.recapRow}>
-              <Text style={styles.recapLabel}>Montant à recharger</Text>
-              <Text style={styles.recapValue}>{amount} FCFA</Text>
-            </View>
-            <View style={styles.recapRow}>
-              <Text style={styles.recapLabel}>Nouveau solde estimé</Text>
-              <Text style={[styles.recapValue, { color: colors.green }]}>135 800 FCFA</Text>
-            </View>
-            <View style={styles.recapInfo}>
-              <IconCheck size={10} color={colors.green} strokeWidth={3} />
-              <Text style={styles.recapInfoText}>Recharge gratuite — aucun frais</Text>
+        {valid && (
+          <View style={{ paddingHorizontal: 22, marginTop: 16 }}>
+            <View style={styles.recap}>
+              <View style={styles.recapRow}>
+                <Text style={styles.recapLabel}>Montant à recharger</Text>
+                <Text style={styles.recapValue}>{displayedAmount} FCFA</Text>
+              </View>
+              <View style={styles.recapRow}>
+                <Text style={styles.recapLabel}>Nouveau solde estimé</Text>
+                <Text style={[styles.recapValue, { color: colors.green }]}>{fmt(newBalance)} FCFA</Text>
+              </View>
+              <View style={styles.recapInfo}>
+                <IconCheck size={10} color={colors.green} strokeWidth={3} />
+                <Text style={styles.recapInfoText}>Recharge gratuite — aucun frais</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         <View style={{ padding: 22 }}>
-          <Button label={`Recharger ${amount} FCFA via ${(operators.find((o) => o.id === operator) || {}).name || 'MTN'}`} pulse onPress={() => {}} />
+          <Button
+            label={loading ? 'Préparation…' : `Recharger ${displayedAmount} FCFA via ${opName}`}
+            pulse
+            disabled={!valid || loading}
+            onPress={onSubmit}
+          />
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -175,9 +268,19 @@ const styles = StyleSheet.create({
   balance: { fontFamily: fonts.bodyBold, fontSize: 30, color: colors.ink, letterSpacing: -0.9 },
   balanceUnit: { fontSize: 13, color: colors.ink2, fontFamily: fonts.bodyMedium },
   section: { fontFamily: fonts.displayItalic, fontSize: 13, color: colors.ink2, marginBottom: 10 },
-  amountGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  amountBtn: { width: '31.5%', height: 50, borderRadius: radius.sm, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center' },
-  amountText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink },
+
+  amountInput: { fontFamily: fonts.bodyBold, fontSize: 36, color: colors.coral, letterSpacing: -1.2, textAlign: 'center' },
+  amountUnit: { fontSize: 16, fontFamily: fonts.bodyRegular, color: colors.ink2 },
+  chipsRow: { marginTop: 14, flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  chip: { flex: 1, minWidth: 70, height: 36, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  chipText: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.ink },
+
+  keypadHint: { marginTop: 14, alignItems: 'center' },
+  keypadHintText: { fontSize: 11, color: colors.ink3, fontStyle: 'italic' },
+  keypad: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  key: { width: '32%', aspectRatio: 1.8, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.lineSoft },
+  keyText: { fontFamily: fonts.bodyBold, fontSize: 20, color: colors.ink },
+
   countryChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft },
   countryText: { fontFamily: fonts.displaySemiBold, fontSize: 12, color: colors.ink },
   opsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 },
