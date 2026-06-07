@@ -6,11 +6,19 @@ export function getWallet(): Promise<{ wallet: Wallet }> {
   return apiGet<{ wallet: Wallet }>('/v1/wallet');
 }
 
-export function topupMobileMoney(body: { amount: number; operator: string; country: string }) {
-  return apiPost<{ ok: true; txId: string; status: 'PENDING' | 'SUCCESS' }>(
-    '/v1/wallet/topup/mobile-money',
-    body,
-  );
+export function topupMobileMoney(body: {
+  amount: number;
+  operator: string;
+  country: string;
+  currency?: 'XOF' | 'EUR';
+}) {
+  return apiPost<{
+    ok: true;
+    txId: string;
+    status: 'PENDING' | 'SUCCESS';
+    paymentUrl?: string;
+    fedapayTxId?: number;
+  }>('/v1/wallet/topup/mobile-money', body);
 }
 
 export function topupCode(code: string): Promise<{ credited: string; gross: string; commission: string }> {

@@ -92,15 +92,7 @@ export function TopUpMethodScreen({ navigation }: RootStackScreenProps<'TopUpMet
 
           {/* Carte bancaire */}
           <Animated.View style={[bobB, { marginTop: 10 }]}>
-            <Pressable
-              onPress={() =>
-                Alert.alert(
-                  'Recharge par carte bancaire',
-                  "Le paiement par carte bancaire (Visa, Mastercard) arrive très bientôt sur Donia. En attendant, recharge via Mobile Money — c'est instantané et gratuit.",
-                  [{ text: 'OK' }],
-                )
-              }
-            >
+            <Pressable onPress={() => navigation.navigate('TopUpCard')}>
               <BrandGradient variant="plum" style={[styles.option, shadow.indigo]}>
                 <View style={[styles.optIcon, { backgroundColor: 'rgba(253,247,246,0.18)' }]}>
                   <Text style={{ fontSize: 24 }}>💳</Text>

@@ -8,8 +8,9 @@ import { fonts } from '../../theme/typography';
 
 export type Country = { code: string; flag: string; name: string; dial: string };
 
-// 8 pays du marché Donia d'abord, puis diaspora.
+// Marché Donia (Afrique de l'Ouest + Centre) + diaspora Europe + Amérique du Nord.
 export const COUNTRIES: Country[] = [
+  // Marché principal Afrique de l'Ouest / Centre
   { code: 'BJ', flag: '🇧🇯', name: 'Bénin', dial: '+229' },
   { code: 'CI', flag: '🇨🇮', name: "Côte d'Ivoire", dial: '+225' },
   { code: 'SN', flag: '🇸🇳', name: 'Sénégal', dial: '+221' },
@@ -18,16 +19,45 @@ export const COUNTRIES: Country[] = [
   { code: 'ML', flag: '🇲🇱', name: 'Mali', dial: '+223' },
   { code: 'NE', flag: '🇳🇪', name: 'Niger', dial: '+227' },
   { code: 'CM', flag: '🇨🇲', name: 'Cameroun', dial: '+237' },
+  { code: 'GH', flag: '🇬🇭', name: 'Ghana', dial: '+233' },
+  { code: 'GN', flag: '🇬🇳', name: 'Guinée', dial: '+224' },
+  { code: 'MA', flag: '🇲🇦', name: 'Maroc', dial: '+212' },
+  { code: 'DZ', flag: '🇩🇿', name: 'Algérie', dial: '+213' },
+  { code: 'TN', flag: '🇹🇳', name: 'Tunisie', dial: '+216' },
+  // Europe — UE / EEE / autres
   { code: 'FR', flag: '🇫🇷', name: 'France', dial: '+33' },
   { code: 'BE', flag: '🇧🇪', name: 'Belgique', dial: '+32' },
-  { code: 'CA', flag: '🇨🇦', name: 'Canada', dial: '+1' },
-  { code: 'US', flag: '🇺🇸', name: 'États-Unis', dial: '+1' },
-  { code: 'GB', flag: '🇬🇧', name: 'Royaume-Uni', dial: '+44' },
   { code: 'DE', flag: '🇩🇪', name: 'Allemagne', dial: '+49' },
-  { code: 'CH', flag: '🇨🇭', name: 'Suisse', dial: '+41' },
   { code: 'ES', flag: '🇪🇸', name: 'Espagne', dial: '+34' },
   { code: 'IT', flag: '🇮🇹', name: 'Italie', dial: '+39' },
   { code: 'PT', flag: '🇵🇹', name: 'Portugal', dial: '+351' },
+  { code: 'NL', flag: '🇳🇱', name: 'Pays-Bas', dial: '+31' },
+  { code: 'CH', flag: '🇨🇭', name: 'Suisse', dial: '+41' },
+  { code: 'AT', flag: '🇦🇹', name: 'Autriche', dial: '+43' },
+  { code: 'IE', flag: '🇮🇪', name: 'Irlande', dial: '+353' },
+  { code: 'LU', flag: '🇱🇺', name: 'Luxembourg', dial: '+352' },
+  { code: 'DK', flag: '🇩🇰', name: 'Danemark', dial: '+45' },
+  { code: 'SE', flag: '🇸🇪', name: 'Suède', dial: '+46' },
+  { code: 'NO', flag: '🇳🇴', name: 'Norvège', dial: '+47' },
+  { code: 'FI', flag: '🇫🇮', name: 'Finlande', dial: '+358' },
+  { code: 'GB', flag: '🇬🇧', name: 'Royaume-Uni', dial: '+44' },
+  { code: 'PL', flag: '🇵🇱', name: 'Pologne', dial: '+48' },
+  { code: 'CZ', flag: '🇨🇿', name: 'Tchéquie', dial: '+420' },
+  { code: 'GR', flag: '🇬🇷', name: 'Grèce', dial: '+30' },
+  { code: 'HU', flag: '🇭🇺', name: 'Hongrie', dial: '+36' },
+  { code: 'RO', flag: '🇷🇴', name: 'Roumanie', dial: '+40' },
+  { code: 'BG', flag: '🇧🇬', name: 'Bulgarie', dial: '+359' },
+  { code: 'HR', flag: '🇭🇷', name: 'Croatie', dial: '+385' },
+  { code: 'SK', flag: '🇸🇰', name: 'Slovaquie', dial: '+421' },
+  { code: 'SI', flag: '🇸🇮', name: 'Slovénie', dial: '+386' },
+  { code: 'EE', flag: '🇪🇪', name: 'Estonie', dial: '+372' },
+  { code: 'LV', flag: '🇱🇻', name: 'Lettonie', dial: '+371' },
+  { code: 'LT', flag: '🇱🇹', name: 'Lituanie', dial: '+370' },
+  { code: 'CY', flag: '🇨🇾', name: 'Chypre', dial: '+357' },
+  { code: 'MT', flag: '🇲🇹', name: 'Malte', dial: '+356' },
+  // Amérique du Nord
+  { code: 'CA', flag: '🇨🇦', name: 'Canada', dial: '+1' },
+  { code: 'US', flag: '🇺🇸', name: 'États-Unis', dial: '+1' },
 ];
 
 export const DEFAULT_COUNTRY: Country = COUNTRIES[0]!;

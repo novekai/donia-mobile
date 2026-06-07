@@ -15,8 +15,13 @@ import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { getMe } from '../../api/me';
 import { getPlatformSettings } from '../../api/platformSettings';
+import { CurrencyToggle } from '../../components/ui/CurrencyToggle';
+import { formatAmount, parseAmountToFcfa, type Currency, fcfaToEur } from '../../lib/currency';
 
-const PRESETS = ['1 000', '5 000', '10 000', '25 000'];
+// Presets adaptes a la devise. Equivalences approximatives :
+// 1 000 FCFA ~ 1.5 EUR, 5 000 FCFA ~ 7.5 EUR, 10 000 FCFA ~ 15 EUR, 25 000 FCFA ~ 38 EUR
+const PRESETS_FCFA = ['1 000', '5 000', '10 000', '25 000'];
+const PRESETS_EUR = ['5', '15', '30', '75'];
 
 function useBlink() {
   const v = useSharedValue(1);
@@ -32,12 +37,12 @@ function useBlink() {
 export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'SendAmount'>) {
   const { categoryKey, recipientPhone, recipientName } = route.params || {};
   const [raw, setRaw] = useState('');
+  const [currency, setCurrency] = useState<Currency>('FCFA');
   const blinkStyle = useBlink();
 
   // Real wallet balance — used to show the user how much they'll have left after sending.
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const balance = Number(meQuery.data?.user?.wallet?.balancePrincipal ?? 0);
-  const afterBalance = Math.max(0, balance - Number(raw || '0'));
 
   // Contraintes de plateforme pilotées depuis l'admin (montants min / max sans KYC).
   // On lit ces valeurs au démarrage (cached 5 min côté React Query) au lieu de hardcoder.
@@ -50,12 +55,19 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
   const maxNoKyc = settingsQuery.data?.maxAmountNoKyc ?? 50_000;
   const userKycApproved = meQuery.data?.user?.kycStatus === 'APPROVED';
 
-  const amountNum = Number(raw || '0');
+  // amountNum est TOUJOURS en FCFA cote interne (backend ne connait que FCFA).
+  // Si l user saisit en EUR on convertit a la volee.
+  const amountNum = parseAmountToFcfa(raw || '0', currency);
+  const afterBalance = Math.max(0, balance - amountNum);
   const tooLow = amountNum > 0 && amountNum < minCard;
   const kycRequired = !userKycApproved && amountNum > maxNoKyc;
   const blockNext = tooLow || kycRequired;
 
-  const formatted = Number(raw || '0').toLocaleString('fr-FR').replace(/,/g, ' ');
+  // Affichage : si EUR, on montre directement ce que l user a tape (avec virgule).
+  // Si FCFA, on formate avec espace milliers.
+  const formatted = currency === 'EUR'
+    ? (raw || '0').replace('.', ',')
+    : Number(raw || '0').toLocaleString('fr-FR').replace(/,/g, ' ');
 
   const onKey = (k: string) => {
     if (k === 'back') {
@@ -74,6 +86,11 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
       <FunBackground palette="cream" density="sparse" />
       <StepHeader step={3} of={5} title="Combien ?" sub="Montant" onBack={() => navigation.goBack()} />
 
+      {/* Currency toggle compact en haut a droite */}
+      <View style={{ paddingHorizontal: 22, paddingTop: 10, alignItems: 'flex-end' }}>
+        <CurrencyToggle value={currency} onChange={(c) => { setCurrency(c); setRaw(''); }} />
+      </View>
+
       {/* Big amount */}
       <View style={styles.amountWrap}>
         <Sparkle size={16} color={colors.mango} style={{ position: 'absolute', top: 12, right: 30 }} />
@@ -82,16 +99,24 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
           <Text style={styles.amount}>{formatted}</Text>
           <Animated.View style={[blinkStyle, styles.cursor]} />
         </View>
-        <Text style={styles.amountUnit}>FCFA</Text>
+        <Text style={styles.amountUnit}>{currency === 'EUR' ? '€' : 'FCFA'}</Text>
+        {currency === 'EUR' && amountNum > 0 && (
+          <Text style={styles.conv}>≈ {amountNum.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA</Text>
+        )}
         <Text style={styles.afterBalance}>
-          Solde après envoi : <Text style={styles.afterBalanceNum}>{afterBalance.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA</Text>
+          Solde après envoi :{' '}
+          <Text style={styles.afterBalanceNum}>
+            {currency === 'EUR'
+              ? `${fcfaToEur(afterBalance).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+              : `${afterBalance.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA`}
+          </Text>
         </Text>
       </View>
 
-      {/* Quick chips */}
+      {/* Quick chips — adaptes a la devise */}
       <View style={{ paddingHorizontal: 22, paddingTop: 14 }}>
         <View style={styles.chipsRow}>
-          {PRESETS.map((p) => {
+          {(currency === 'EUR' ? PRESETS_EUR : PRESETS_FCFA).map((p) => {
             const on = p.replace(/\s/g, '') === raw;
             return (
               <Pressable
@@ -99,7 +124,9 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
                 onPress={() => onPreset(p)}
                 style={[styles.chip, on && { backgroundColor: colors.coral, transform: [{ scale: 1.04 }] }]}
               >
-                <Text style={[styles.chipText, on && { color: colors.bg }]}>{p}</Text>
+                <Text style={[styles.chipText, on && { color: colors.bg }]}>
+                  {currency === 'EUR' ? `${p} €` : p}
+                </Text>
               </Pressable>
             );
           })}
@@ -120,7 +147,7 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
               <Text style={styles.recapHintText}>Aucun frais à l'envoi</Text>
             </View>
           </View>
-          <Text style={styles.recapAmt}>{formatted} FCFA</Text>
+          <Text style={styles.recapAmt}>{formatted} {currency === 'EUR' ? '€' : 'FCFA'}</Text>
         </View>
 
         {/* Garde-fous : montants min/max appliqués depuis la conf admin */}
@@ -141,7 +168,16 @@ export function SendAmountScreen({ navigation, route }: RootStackScreenProps<'Se
           label="Continuer"
           pulse
           disabled={!raw || amountNum <= 0 || blockNext}
-          onPress={() => navigation.navigate('SendStyle', { categoryKey, recipientPhone, recipientName, amount: formatted })}
+          onPress={() =>
+            navigation.navigate('SendStyle', {
+              categoryKey,
+              recipientPhone,
+              recipientName,
+              // Toujours envoyer le montant en FCFA aux ecrans suivants
+              // (le backend n attend que des FCFA).
+              amount: amountNum.toLocaleString('fr-FR').replace(/,/g, ' '),
+            })
+          }
         />
       </View>
     </ScreenContainer>
@@ -155,6 +191,7 @@ const styles = StyleSheet.create({
   amountUnit: { marginTop: 6, fontFamily: fonts.displayItalic, fontSize: 15, color: colors.ink2 },
   afterBalance: { marginTop: 6, fontSize: 11, color: colors.ink2 },
   afterBalanceNum: { fontFamily: fonts.bodyBold, color: colors.ink },
+  conv: { marginTop: 2, fontSize: 11, color: colors.ink3, fontFamily: fonts.displayItalic },
   chipsRow: { flexDirection: 'row', gap: 8 },
   chip: { flex: 1, height: 36, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.ink },
