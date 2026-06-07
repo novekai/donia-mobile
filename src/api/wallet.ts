@@ -46,9 +46,11 @@ export function getRecentTopups(): Promise<{ recent: Transaction[] }> {
 }
 
 // Retrait flexible : phoneNumber pour Mobile Money OU accountNumber pour carte bancaire / IBAN.
+// `amount` est TOUJOURS en FCFA cote backend ; `currency` indique juste la devise affichee a l'user.
 export function withdraw(body: {
-  amount: number;
+  amount: number;            // FCFA
   operator: string;          // 'mtn', 'moov', 'orange', 'wave', 'bank_card'
+  currency?: 'XOF' | 'EUR';  // devise saisie par l'user (parite fixe 655.957)
   phoneNumber?: string;      // E.164 si Mobile Money
   accountNumber?: string;    // IBAN ou numero de carte si bank_card
 }) {

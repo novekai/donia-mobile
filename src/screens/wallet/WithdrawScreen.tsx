@@ -1,14 +1,15 @@
-// Withdraw — retrait Mobile Money depuis le solde Donia.
+// Withdraw — retrait Mobile Money ou carte bancaire depuis le solde Donia.
 // V1 : la demande est créée en PENDING, traitée manuellement côté admin.
-// V1.1 : intégration FedaPay payout pour automatiser.
+// Saisie en FCFA ou EUR (toggle discret) ; le backend reçoit toujours du FCFA.
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, Alert, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert, TextInput } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { ScreenHeader } from '../../components/composed/ScreenHeader';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
+import { CurrencyToggle } from '../../components/ui/CurrencyToggle';
 import { PhoneInput, DEFAULT_COUNTRY, toE164, type Country } from '../../components/ui/PhoneInput';
 import { IconCheck } from '../../components/ui/Icons';
 import { colors, radius } from '../../theme/tokens';
@@ -16,9 +17,12 @@ import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { withdraw } from '../../api/wallet';
 import { getMe } from '../../api/me';
+import { getPlatformSettings } from '../../api/platformSettings';
 import { getApiErrorMessage } from '../../api/client';
+import { formatAmount, parseAmountToFcfa, fcfaToEur, type Currency } from '../../lib/currency';
 
-const PRESETS = ['1 000', '5 000', '10 000', '25 000'];
+const PRESETS_FCFA = ['1 000', '5 000', '10 000', '25 000'];
+const PRESETS_EUR = ['2', '10', '20', '50'];
 
 const OPERATORS: { key: string; label: string; emoji: string; color: string }[] = [
   { key: 'mtn', label: 'MTN', emoji: '🟡', color: colors.mango },
@@ -28,18 +32,21 @@ const OPERATORS: { key: string; label: string; emoji: string; color: string }[] 
   { key: 'bank_card', label: 'Carte bancaire', emoji: '💳', color: colors.plum },
 ];
 
-function fmt(n: number): string {
+function fmtFcfa(n: number): string {
   return Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
 }
 
 export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>) {
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
+  const settingsQuery = useQuery({ queryKey: ['platformSettings'], queryFn: getPlatformSettings });
 
   const user = meQuery.data?.user;
   const balance = Number(user?.wallet?.balancePrincipal ?? 0);
   const kycApproved = user?.kycStatus === 'APPROVED';
+  const minWithdrawal = settingsQuery.data?.minWithdrawalAmount ?? 500;
 
+  const [currency, setCurrency] = useState<Currency>('FCFA');
   const [raw, setRaw] = useState('');
   const [operator, setOperator] = useState<string>('mtn');
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
@@ -57,13 +64,19 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
     }
   }, [user, localPhone]);
 
-  const amountNum = Number(raw || '0');
-  const formatted = fmt(amountNum);
-  const enough = balance >= amountNum;
+  // Le backend raisonne toujours en FCFA. La devise n'est qu'une couche d'affichage.
+  const amountFcfa = parseAmountToFcfa(raw || '0', currency);
+  const displayedAmount =
+    currency === 'EUR'
+      ? (raw || '0').replace('.', ',')
+      : Number(raw || '0').toLocaleString('fr-FR').replace(/,/g, ' ');
+
+  const enough = balance >= amountFcfa;
+  const reachesMin = amountFcfa >= minWithdrawal;
   const destinationValid = isBankCard
     ? accountNumber.replace(/\s/g, '').length >= 8
     : localPhone.replace(/\D/g, '').length >= 8;
-  const valid = amountNum > 0 && enough && destinationValid;
+  const valid = amountFcfa > 0 && reachesMin && enough && destinationValid;
 
   async function onConfirm() {
     if (loading || !valid) return;
@@ -81,8 +94,9 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
     setLoading(true);
     try {
       const res = await withdraw({
-        amount: amountNum,
+        amount: amountFcfa,
         operator,
+        currency: currency === 'EUR' ? 'EUR' : 'XOF',
         ...(isBankCard
           ? { accountNumber: accountNumber.replace(/\s/g, '') }
           : { phoneNumber: toE164(country, localPhone) }),
@@ -101,6 +115,17 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
     }
   }
 
+  const ctaLabel = loading
+    ? 'Envoi…'
+    : currency === 'EUR'
+      ? `Retirer ${displayedAmount || '0'} €`
+      : `Retirer ${displayedAmount || '0'} FCFA`;
+
+  const minLabel =
+    currency === 'EUR'
+      ? `${fcfaToEur(minWithdrawal).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+      : `${fmtFcfa(minWithdrawal)} FCFA`;
+
   return (
     <ScreenContainer avoidKeyboard>
       <FunBackground palette="cream" density="sparse" />
@@ -113,7 +138,7 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
         {/* Solde disponible */}
         <Card pad={16} style={{ alignItems: 'center' }}>
           <Text style={styles.balanceLabel}>SOLDE DISPONIBLE</Text>
-          <Text style={styles.balanceValue}>{fmt(balance)} <Text style={styles.balanceUnit}>FCFA</Text></Text>
+          <Text style={styles.balanceValue}>{formatAmount(balance, currency)}</Text>
         </Card>
 
         {/* KYC warning si pas validé */}
@@ -129,13 +154,22 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
           </View>
         )}
 
-        {/* Montant */}
-        <Text style={styles.sectionLabel}>MONTANT À RETIRER</Text>
+        {/* Toggle FCFA / EUR */}
+        <View style={styles.amountHeader}>
+          <Text style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>MONTANT À RETIRER</Text>
+          <CurrencyToggle value={currency} onChange={(c) => { setCurrency(c); setRaw(''); }} />
+        </View>
+
         <Card pad={16}>
-          <Text style={styles.amountInput}>{formatted} <Text style={styles.amountUnit}>FCFA</Text></Text>
+          <Text style={styles.amountInput}>
+            {displayedAmount} <Text style={styles.amountUnit}>{currency === 'EUR' ? '€' : 'FCFA'}</Text>
+          </Text>
+          {currency === 'EUR' && amountFcfa > 0 && (
+            <Text style={styles.conv}>≈ {fmtFcfa(amountFcfa)} FCFA</Text>
+          )}
 
           <View style={styles.chipsRow}>
-            {PRESETS.map((p) => {
+            {(currency === 'EUR' ? PRESETS_EUR : PRESETS_FCFA).map((p) => {
               const on = p.replace(/\s/g, '') === raw;
               return (
                 <Pressable
@@ -143,14 +177,19 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
                   onPress={() => setRaw(p.replace(/\s/g, ''))}
                   style={[styles.chip, on && { backgroundColor: colors.coral, borderColor: colors.coral }]}
                 >
-                  <Text style={[styles.chipText, on && { color: colors.bg }]}>{p}</Text>
+                  <Text style={[styles.chipText, on && { color: colors.bg }]}>
+                    {currency === 'EUR' ? `${p} €` : p}
+                  </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          {amountNum > 0 && !enough && (
-            <Text style={styles.warn}>⚠️ Solde insuffisant ({fmt(balance)} FCFA disponibles).</Text>
+          {amountFcfa > 0 && !reachesMin && (
+            <Text style={styles.warn}>⚠️ Minimum requis : {minLabel}.</Text>
+          )}
+          {amountFcfa > 0 && reachesMin && !enough && (
+            <Text style={styles.warn}>⚠️ Solde insuffisant ({formatAmount(balance, currency)} disponibles).</Text>
           )}
         </Card>
 
@@ -204,14 +243,14 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
         )}
         <Text style={styles.hint}>
           {isBankCard
-            ? `Tu recevras tes ${formatted || '0'} FCFA sur ce compte bancaire sous 2-5 jours ouvrés.`
-            : `Tu recevras tes ${formatted || '0'} FCFA sur ce numéro ${OPERATORS.find((o) => o.key === operator)?.label ?? ''} sous 24-48h ouvrées.`}
+            ? `Tu recevras tes ${displayedAmount || '0'} ${currency === 'EUR' ? '€' : 'FCFA'} sur ce compte bancaire sous 2-5 jours ouvrés.`
+            : `Tu recevras tes ${displayedAmount || '0'} ${currency === 'EUR' ? '€' : 'FCFA'} sur ce numéro ${OPERATORS.find((o) => o.key === operator)?.label ?? ''} sous 24-48h ouvrées.`}
         </Text>
       </ScrollView>
 
       <View style={styles.footer}>
         <Button
-          label={loading ? 'Envoi…' : `Retirer ${formatted || '0'} FCFA`}
+          label={ctaLabel}
           pulse
           disabled={!valid || loading}
           onPress={onConfirm}
@@ -224,17 +263,18 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
 const styles = StyleSheet.create({
   balanceLabel: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.indigo, letterSpacing: 1.2 },
   balanceValue: { marginTop: 6, fontFamily: fonts.bodyBold, fontSize: 36, color: colors.ink, letterSpacing: -1 },
-  balanceUnit: { fontSize: 14, fontFamily: fonts.bodyRegular, color: colors.ink2 },
 
   warnCard: { marginTop: 14, padding: 14, borderRadius: radius.md, backgroundColor: 'rgba(255,199,0,0.12)', borderWidth: 1, borderColor: 'rgba(255,199,0,0.35)', flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   warnEmoji: { fontSize: 24 },
   warnTitle: { fontFamily: fonts.displaySemiBold, fontSize: 14, color: colors.ink },
   warnBody: { marginTop: 4, fontSize: 12, color: colors.ink2, lineHeight: 17 },
 
+  amountHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 22, marginBottom: 8 },
   sectionLabel: { marginTop: 22, marginBottom: 8, fontFamily: fonts.bodyBold, fontSize: 11, color: colors.indigo, letterSpacing: 1.2 },
 
   amountInput: { fontFamily: fonts.bodyBold, fontSize: 40, color: colors.coral, letterSpacing: -1.5, textAlign: 'center' },
   amountUnit: { fontSize: 16, fontFamily: fonts.bodyRegular, color: colors.ink2 },
+  conv: { marginTop: 4, textAlign: 'center', fontSize: 12, color: colors.ink3, fontStyle: 'italic' },
   chipsRow: { marginTop: 14, flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   chip: { flex: 1, minWidth: 70, height: 36, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.ink },
