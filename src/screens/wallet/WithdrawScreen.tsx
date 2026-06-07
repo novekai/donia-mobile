@@ -21,8 +21,8 @@ import { getPlatformSettings } from '../../api/platformSettings';
 import { getApiErrorMessage } from '../../api/client';
 import { formatAmount, parseAmountToFcfa, fcfaToEur, type Currency } from '../../lib/currency';
 
-const PRESETS_FCFA = ['1 000', '5 000', '10 000', '25 000'];
-const PRESETS_EUR = ['2', '10', '20', '50'];
+const PRESETS_FCFA = ['500', '1 000', '5 000', '10 000', '25 000'];
+const PRESETS_EUR = ['1', '2', '10', '20', '50'];
 
 const OPERATORS: { key: string; label: string; emoji: string; color: string }[] = [
   { key: 'mtn', label: 'MTN', emoji: '🟡', color: colors.mango },
@@ -185,6 +185,30 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
             })}
           </View>
 
+          {/* Clavier numérique : saisie libre du montant */}
+          <View style={styles.keypadHint}>
+            <Text style={styles.keypadHintText}>Touche un preset ou saisis-le directement</Text>
+          </View>
+          <View style={styles.keypad}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, currency === 'EUR' ? '.' : '0', 0, 'X'].map((d, i) => (
+              <Pressable
+                key={`${d}-${i}`}
+                onPress={() => {
+                  if (d === 'X') {
+                    setRaw((r) => r.slice(0, -1));
+                  } else if (d === '.') {
+                    setRaw((r) => (r.includes('.') ? r : (r || '0') + '.'));
+                  } else {
+                    setRaw((r) => (r === '0' ? '' : r) + String(d));
+                  }
+                }}
+                style={styles.key}
+              >
+                <Text style={styles.keyText}>{d === 'X' ? '⌫' : d}</Text>
+              </Pressable>
+            ))}
+          </View>
+
           {amountFcfa > 0 && !reachesMin && (
             <Text style={styles.warn}>⚠️ Minimum requis : {minLabel}.</Text>
           )}
@@ -276,8 +300,14 @@ const styles = StyleSheet.create({
   amountUnit: { fontSize: 16, fontFamily: fonts.bodyRegular, color: colors.ink2 },
   conv: { marginTop: 4, textAlign: 'center', fontSize: 12, color: colors.ink3, fontStyle: 'italic' },
   chipsRow: { marginTop: 14, flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  chip: { flex: 1, minWidth: 70, height: 36, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center' },
+  chip: { flex: 1, minWidth: 70, height: 36, borderRadius: 99, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.ink },
+
+  keypadHint: { marginTop: 14, alignItems: 'center' },
+  keypadHintText: { fontSize: 11, color: colors.ink3, fontStyle: 'italic' },
+  keypad: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  key: { width: '32%', aspectRatio: 1.8, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.lineSoft },
+  keyText: { fontFamily: fonts.bodyBold, fontSize: 20, color: colors.ink },
 
   opsRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   opCard: { flex: 1, minWidth: '22%', aspectRatio: 1, padding: 10, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft, alignItems: 'center', justifyContent: 'center', gap: 4, position: 'relative' },
