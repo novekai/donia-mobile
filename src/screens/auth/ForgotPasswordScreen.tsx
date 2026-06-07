@@ -1,6 +1,6 @@
 // ForgotPassword — saisie contact + choix canal (WhatsApp/Email) — branché API
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, Alert, Modal, FlatList } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, Alert, Modal, FlatList, ScrollView } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
 import { FunBackground } from '../../components/deco/FunBackground';
@@ -99,102 +99,108 @@ export function ForgotPasswordScreen({ navigation }: RootStackScreenProps<'Forgo
       <FunBackground palette="cream" density="sparse" />
       <ScreenHeader title="" onBack={() => navigation.goBack()} />
 
-      <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
-        <Animated.View style={[bobStyle, styles.iconWrap]}>
-          <BrandGradient variant="mango" style={styles.iconInner}>
-            <Text style={styles.iconText}>🔑</Text>
-          </BrandGradient>
-        </Animated.View>
-        <Text style={styles.title}>
-          On va t'aider <Text style={styles.titleItalic}>à récupérer</Text> ton compte
-        </Text>
-        <Text style={styles.subtitle}>
-          Choisis un canal — on t'enverra un code de réinitialisation.
-        </Text>
-      </View>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
+          <Animated.View style={[bobStyle, styles.iconWrap]}>
+            <BrandGradient variant="mango" style={styles.iconInner}>
+              <Text style={styles.iconText}>🔑</Text>
+            </BrandGradient>
+          </Animated.View>
+          <Text style={styles.title}>
+            On va t'aider <Text style={styles.titleItalic}>à récupérer</Text> ton compte
+          </Text>
+          <Text style={styles.subtitle}>
+            Choisis un canal — on t'enverra un code de réinitialisation.
+          </Text>
+        </View>
 
-      <View style={styles.list}>
-        {METHODS.map((m) => {
-          const on = m.id === selected;
-          return (
-            <Pressable
-              key={m.id}
-              onPress={() => setSelected(m.id)}
-              style={[styles.method, on && { borderWidth: 2, borderColor: m.accent }]}
-            >
-              <View style={[styles.methodIcon, { backgroundColor: `${m.accent}22` }]}>
-                <Text style={{ fontSize: 18 }}>{m.emoji}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.methodTitle}>{m.title}</Text>
-                <Text style={styles.methodSub}>{m.help}</Text>
-              </View>
-              <View style={[styles.radio, on && { backgroundColor: m.accent, borderWidth: 0 }]}>
-                {on && <IconCheck size={12} color={colors.bg} strokeWidth={3.5} />}
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+        <View style={styles.list}>
+          {METHODS.map((m) => {
+            const on = m.id === selected;
+            return (
+              <Pressable
+                key={m.id}
+                onPress={() => setSelected(m.id)}
+                style={[styles.method, on && { borderWidth: 2, borderColor: m.accent }]}
+              >
+                <View style={[styles.methodIcon, { backgroundColor: `${m.accent}22` }]}>
+                  <Text style={{ fontSize: 18 }}>{m.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.methodTitle}>{m.title}</Text>
+                  <Text style={styles.methodSub}>{m.help}</Text>
+                </View>
+                <View style={[styles.radio, on && { backgroundColor: m.accent, borderWidth: 0 }]}>
+                  {on && <IconCheck size={12} color={colors.bg} strokeWidth={3.5} />}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <View style={{ paddingHorizontal: 24, marginTop: 18 }}>
-        <Text style={styles.label}>
-          {selected === 'WHATSAPP' ? 'Ton numéro WhatsApp' : 'Ton adresse email'}
-        </Text>
+        <View style={{ paddingHorizontal: 24, marginTop: 18 }}>
+          <Text style={styles.label}>
+            {selected === 'WHATSAPP' ? 'Ton numéro WhatsApp' : 'Ton adresse email'}
+          </Text>
 
-        {selected === 'WHATSAPP' ? (
-          <View style={styles.phoneRow}>
-            <Pressable style={styles.dialBtn} onPress={() => setPickerOpen(true)}>
-              <Text style={styles.dialFlag}>{country.flag}</Text>
-              <Text style={styles.dialCode}>{country.dial}</Text>
-              <Text style={styles.dialChevron}>▾</Text>
-            </Pressable>
+          {selected === 'WHATSAPP' ? (
+            <View style={styles.phoneRow}>
+              <Pressable style={styles.dialBtn} onPress={() => setPickerOpen(true)}>
+                <Text style={styles.dialFlag}>{country.flag}</Text>
+                <Text style={styles.dialCode}>{country.dial}</Text>
+                <Text style={styles.dialChevron}>▾</Text>
+              </Pressable>
+              <TextInput
+                value={localPhone}
+                onChangeText={setLocalPhone}
+                placeholder={method.placeholder}
+                placeholderTextColor={colors.ink3}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={[styles.input, styles.phoneInput]}
+              />
+            </View>
+          ) : (
             <TextInput
-              value={localPhone}
-              onChangeText={setLocalPhone}
+              value={email}
+              onChangeText={setEmail}
               placeholder={method.placeholder}
               placeholderTextColor={colors.ink3}
-              keyboardType="phone-pad"
+              keyboardType="email-address"
+              returnKeyType="done"
               autoCapitalize="none"
               autoCorrect={false}
-              style={[styles.input, styles.phoneInput]}
+              style={styles.input}
             />
-          </View>
-        ) : (
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder={method.placeholder}
-            placeholderTextColor={colors.ink3}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-          />
-        )}
+          )}
 
-        <Text style={styles.hint}>
-          💡 Utilise exactement{' '}
-          {selected === 'WHATSAPP' ? 'le numéro WhatsApp' : "l'adresse email"}{' '}
-          de ton compte (celui utilisé lors de l'inscription).
-        </Text>
-      </View>
-
-      <View style={{ flex: 1 }} />
-
-      <View style={{ paddingHorizontal: 24, paddingBottom: 28 }}>
-        <Button
-          label={sending ? 'Envoi…' : 'Envoyer le code'}
-          pulse
-          disabled={sending}
-          onPress={onSend}
-        />
-        <Pressable onPress={() => navigation.goBack()} style={{ marginTop: 14 }}>
-          <Text style={styles.back}>
-            Ça te revient ? <Text style={{ color: colors.coral, fontFamily: fonts.bodyBold }}>Se connecter</Text>
+          <Text style={styles.hint}>
+            💡 Utilise exactement{' '}
+            {selected === 'WHATSAPP' ? 'le numéro WhatsApp' : "l'adresse email"}{' '}
+            de ton compte (celui utilisé lors de l'inscription).
           </Text>
-        </Pressable>
-      </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
+          <Button
+            label={sending ? 'Envoi…' : 'Envoyer le code'}
+            pulse
+            disabled={sending}
+            onPress={onSend}
+          />
+          <Pressable onPress={() => navigation.goBack()} style={{ marginTop: 14 }}>
+            <Text style={styles.back}>
+              Ça te revient ? <Text style={{ color: colors.coral, fontFamily: fonts.bodyBold }}>Se connecter</Text>
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
 
       {/* Country picker modal */}
       <Modal visible={pickerOpen} animationType="slide" transparent onRequestClose={() => setPickerOpen(false)}>
