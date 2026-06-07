@@ -50,19 +50,12 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
   const [raw, setRaw] = useState('');
   const [operator, setOperator] = useState<string>('mtn');
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
-  const [localPhone, setLocalPhone] = useState(user?.phone?.replace(/^\+\d{1,3}/, '') ?? '');
+  // Pas de pré-remplissage : on retire souvent vers un autre numéro (proche, second compte MM, etc.)
+  const [localPhone, setLocalPhone] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
   const isBankCard = operator === 'bank_card';
-
-  // Pré-remplit avec le téléphone du user au mount si pas encore rempli
-  React.useEffect(() => {
-    if (user?.phone && !localPhone) {
-      const stripped = user.phone.replace(/^\+229/, '').replace(/^\+\d{1,3}/, '');
-      setLocalPhone(stripped);
-    }
-  }, [user, localPhone]);
 
   // Le backend raisonne toujours en FCFA. La devise n'est qu'une couche d'affichage.
   const amountFcfa = parseAmountToFcfa(raw || '0', currency);
