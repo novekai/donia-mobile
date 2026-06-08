@@ -148,7 +148,7 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
   const bobStyle = useBob({ duration: 5000 });
 
   return (
-    <ScreenContainer>
+    <ScreenContainer avoidKeyboard>
       <FunBackground palette="cream" density="sparse" />
       <StepHeader step={4} of={4} title={t('send.stepTitle')} sub={t('send.stepSub')} onBack={() => navigation.goBack()} />
 
@@ -278,6 +278,30 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
             <Text style={styles.topupHintText}>{t('send.topupHint')}</Text>
           </Pressable>
         )}
+
+        {/* Bouton Envoyer inline : garde-fou pour que l'utilisateur ne quitte pas l'app
+            si le footer est masque par le clavier. Toujours accessible via scroll. */}
+        <View style={{ marginTop: 20 }}>
+          <Button
+            label={
+              loading
+                ? t('send.btnSending')
+                : !privacyChecked
+                ? t('send.btnPrivacyCheck')
+                : t('send.btnSend', { amount })
+            }
+            pulse
+            shimmer
+            disabled={loading}
+            onPress={onSend}
+          />
+          <View style={styles.secure}>
+            <IconLock color={colors.ink3} />
+            <Text style={styles.secureText}>
+              {!privacyChecked ? t('send.secureBeforePayment') : t('send.secureFedapay')}
+            </Text>
+          </View>
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
