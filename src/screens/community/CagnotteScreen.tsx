@@ -139,7 +139,26 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
     const senderName = meQuery.data?.user.name?.split(' ')[0] ?? '';
     const publicCode = (cagnotte as { publicCode?: string | null }).publicCode;
     const link = publicCode ? `https://doniia.com/c/${publicCode}` : 'https://doniia.com';
-    const msg = `${senderName ? `${senderName} t'invite à` : 'Rejoins-moi pour'} contribuer à la cagnotte "${cagnotte.title}" sur Donia 🎁\n\nObjectif : ${fmt(cagnotte.goalAmount)} FCFA\nDéjà collecté : ${fmt(cagnotte.totalRaised)} FCFA\n\nContribue directement (pas besoin d'appli) :\n${link}`;
+    const pct = Math.min(100, (Number(cagnotte.totalRaised) / Number(cagnotte.goalAmount)) * 100);
+    const inviter = senderName ? `${senderName}` : 'Un proche';
+    // Design "carte invitation" : entete + bloc cagnotte + lien — style WhatsApp friendly
+    const msg =
+`🎁  CAGNOTTE DONIA  🎁
+━━━━━━━━━━━━━━━━━━
+
+✨ ${inviter} t'invite à participer
+
+📌 ${cagnotte.title}
+👤 Organisée par ${inviter}
+
+💰 Objectif : ${fmt(cagnotte.goalAmount)} FCFA
+💝 Déjà collecté : ${fmt(cagnotte.totalRaised)} FCFA  (${pct.toFixed(0)}%)
+${cagnotte.deadline ? `📅 Clôture le ${new Date(cagnotte.deadline).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}\n` : ''}
+👉 Contribue ici :
+${link}
+
+━━━━━━━━━━━━━━━━━━
+Donia · L'amour. Le don. Le partage.`;
     try {
       await Share.share({ title: `Cagnotte ${cagnotte.title}`, message: msg });
     } catch {
