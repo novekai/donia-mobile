@@ -33,6 +33,7 @@ import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 // Main flow (above tabs)
 import { NotificationsScreen } from '../screens/main/NotificationsScreen';
 import { BirthdaysScreen } from '../screens/main/BirthdaysScreen';
+import { BirthdayProfileScreen } from '../screens/main/BirthdayProfileScreen';
 import { TopUpMethodScreen } from '../screens/wallet/TopUpMethodScreen';
 import { TopUpMobileMoneyScreen } from '../screens/wallet/TopUpMobileMoneyScreen';
 import { TopUpCodeScreen } from '../screens/wallet/TopUpCodeScreen';
@@ -56,6 +57,7 @@ import { TxDetailScreen } from '../screens/receive/TxDetailScreen';
 
 // Community
 import { CagnotteScreen } from '../screens/community/CagnotteScreen';
+import { CagnotteCreateScreen } from '../screens/community/CagnotteCreateScreen';
 import { ReferralScreen } from '../screens/community/ReferralScreen';
 
 // Settings
@@ -127,6 +129,7 @@ export function RootNavigator() {
         {/* Above tabs */}
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Birthdays" component={BirthdaysScreen} />
+        <Stack.Screen name="BirthdayProfile" component={BirthdayProfileScreen} />
         <Stack.Screen name="TopUpMethod" component={TopUpMethodScreen} />
         <Stack.Screen name="TopUpMobileMoney" component={TopUpMobileMoneyScreen} />
         <Stack.Screen name="TopUpCode" component={TopUpCodeScreen} />
@@ -144,6 +147,7 @@ export function RootNavigator() {
         <Stack.Screen name="RedeemSuccess" component={RedeemSuccessScreen} options={{ animation: 'fade' }} />
         <Stack.Screen name="TxDetail" component={TxDetailScreen} />
         <Stack.Screen name="Cagnotte" component={CagnotteScreen} />
+        <Stack.Screen name="CagnotteCreate" component={CagnotteCreateScreen} />
         <Stack.Screen name="Referral" component={ReferralScreen} />
         <Stack.Screen name="MyInfo" component={MyInfoScreen} />
         <Stack.Screen name="Security" component={SecurityScreen} />

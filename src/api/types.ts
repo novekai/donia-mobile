@@ -30,6 +30,11 @@ export type User = {
   avatarUrl?: string | null;
   birthdayOptIn?: boolean;
   birthdayPublic?: boolean;
+  birthdayNote?: string | null;
+  birthdayShowAge?: boolean;
+  birthdayAutoCard?: boolean;
+  birthdayAutoCardAmount?: number;
+  birthdayVisibility?: 'public' | 'contacts' | 'private';
   showEmailPublic?: boolean;
   showPhonePublic?: boolean;
   showAvatarPublic?: boolean;

@@ -9,7 +9,8 @@ export function getMe(): Promise<{ user: User }> {
 // Champs éditables via PATCH /v1/me. Doit rester en phase avec patchSchema (backend/src/routes/me.ts).
 type EditableProfileFields =
   | 'name' | 'whatsapp' | 'email' | 'sex' | 'dob' | 'city' | 'country'
-  | 'birthdayOptIn' | 'birthdayPublic'
+  | 'birthdayOptIn' | 'birthdayPublic' | 'birthdayNote' | 'birthdayShowAge'
+  | 'birthdayAutoCard' | 'birthdayAutoCardAmount' | 'birthdayVisibility'
   | 'showEmailPublic' | 'showPhonePublic' | 'showAvatarPublic'
   | 'preferredLanguage'
   | 'notifPushEnabled' | 'notifEmailEnabled' | 'notifWhatsAppEnabled';

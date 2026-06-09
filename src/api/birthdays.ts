@@ -9,8 +9,15 @@ export type BirthdayPerson = {
   phone: string;
   day: 'today' | 'tomorrow' | 'after';
   variant: 'coral' | 'pink' | 'mint' | 'mango' | 'indigo' | 'plum';
+  age: number | null;
+  friendsInCommon: number;
+  note: string | null;
 };
 
 export function listBirthdays(): Promise<{ people: BirthdayPerson[] }> {
   return apiGet<{ people: BirthdayPerson[] }>('/v1/birthdays');
+}
+
+export function getBirthdayProfile(userId: string): Promise<{ person: BirthdayPerson }> {
+  return apiGet<{ person: BirthdayPerson }>(`/v1/birthdays/${encodeURIComponent(userId)}`);
 }

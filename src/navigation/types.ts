@@ -40,6 +40,8 @@ export type RootStackParams = {
   // Modal / push above tabs
   Notifications: undefined;
   Birthdays: undefined;
+  BirthdayProfile: { userId: string };
+  CagnotteCreate: undefined;
   Help: undefined;
   TopUpMethod: undefined;
   TopUpMobileMoney: { method?: 'mobile_money' | 'card' } | undefined;
@@ -58,7 +60,7 @@ export type RootStackParams = {
   Receive: { code?: string };
   RedeemSuccess: { amount?: string; sender?: string };
   TxDetail: { txId?: string; cardId?: string };
-  Cagnotte: undefined;
+  Cagnotte: { id?: string } | undefined;
   Referral: undefined;
   MyInfo: undefined;
   Security: undefined;
