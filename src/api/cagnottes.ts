@@ -12,6 +12,10 @@ export type CagnotteSummary = {
   totalRaised: string;
   deadline: string | null;
   status: CagnotteStatus;
+  publicCode: string | null;
+  commissionPercent: string;
+  withdrawnAt: string | null;
+  withdrawnAmount: string | null;
   createdAt: string;
   _count?: { contributions: number };
 };
@@ -49,4 +53,16 @@ export function getCagnotte(id: string): Promise<{ cagnotte: CagnotteDetail }> {
 
 export function contributeCagnotte(id: string, body: { amount: number; message?: string }) {
   return apiPost<{ contribution: CagnotteContributor }>(`/v1/cagnottes/${encodeURIComponent(id)}/contribute`, body);
+}
+
+export type CagnotteWithdrawResult = {
+  cagnotte: CagnotteSummary;
+  gross: string;
+  commission: string;
+  net: string;
+  commissionPercent: string;
+};
+
+export function withdrawCagnotte(id: string) {
+  return apiPost<CagnotteWithdrawResult>(`/v1/cagnottes/${encodeURIComponent(id)}/withdraw`, {});
 }

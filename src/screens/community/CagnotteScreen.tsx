@@ -18,7 +18,7 @@ import { IconPlus } from '../../components/ui/Icons';
 import { colors, radius, shadow } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
-import { getCagnotte, listMyCagnottes, contributeCagnotte } from '../../api/cagnottes';
+import { getCagnotte, listMyCagnottes, contributeCagnotte, withdrawCagnotte } from '../../api/cagnottes';
 import { getApiErrorMessage } from '../../api/client';
 
 function fmt(s: string | number): string {
@@ -48,6 +48,8 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
 
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
   const balance = Number(meQuery.data?.user.wallet?.balancePrincipal ?? 0);
+  const currentUserId = meQuery.data?.user.id;
+  const [withdrawing, setWithdrawing] = useState(false);
   const minePromise = useQuery({ queryKey: ['cagnottes-mine'], queryFn: listMyCagnottes, enabled: !explicitId });
   const targetId = explicitId ?? minePromise.data?.items.find((c) => c.status === 'ACTIVE')?.id ?? null;
 
@@ -135,15 +137,53 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
   async function onInvite() {
     if (!cagnotte) return;
     const senderName = meQuery.data?.user.name?.split(' ')[0] ?? '';
-    const msg = `${senderName ? `${senderName} t'invite à` : 'Rejoins-moi pour'} contribuer à la cagnotte "${cagnotte.title}" sur Donia 🎁\n\nObjectif : ${fmt(cagnotte.goalAmount)} FCFA\nDéjà collecté : ${fmt(cagnotte.totalRaised)} FCFA\n\nTélécharge Donia : https://doniia.com`;
+    const publicCode = (cagnotte as { publicCode?: string | null }).publicCode;
+    const link = publicCode ? `https://doniia.com/c/${publicCode}` : 'https://doniia.com';
+    const msg = `${senderName ? `${senderName} t'invite à` : 'Rejoins-moi pour'} contribuer à la cagnotte "${cagnotte.title}" sur Donia 🎁\n\nObjectif : ${fmt(cagnotte.goalAmount)} FCFA\nDéjà collecté : ${fmt(cagnotte.totalRaised)} FCFA\n\nContribue directement (pas besoin d'appli) :\n${link}`;
     try {
-      await Share.share({
-        title: `Cagnotte ${cagnotte.title}`,
-        message: msg,
-      });
+      await Share.share({ title: `Cagnotte ${cagnotte.title}`, message: msg });
     } catch {
       // utilisateur a annule, rien a faire
     }
+  }
+
+  function onWithdraw() {
+    if (!cagnotte || withdrawing) return;
+    const raised = Number(cagnotte.totalRaised);
+    if (raised <= 0) {
+      return Alert.alert('Aucun fonds', 'La cagnotte n\'a pas encore reçu de contributions.');
+    }
+    const commissionPct = Number((cagnotte as { commissionPercent?: string | number }).commissionPercent ?? 3);
+    const commission = Math.round((raised * commissionPct) / 100);
+    const net = raised - commission;
+    Alert.alert(
+      'Retirer les fonds ?',
+      `Tu vas recevoir ${fmt(net)} FCFA sur ton compte Donia.\n\nDétail :\n· Collecté : ${fmt(raised)} FCFA\n· Commission Donia (${commissionPct}%) : ${fmt(commission)} FCFA\n· Net : ${fmt(net)} FCFA\n\nLa cagnotte sera clôturée.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Retirer',
+          style: 'default',
+          onPress: async () => {
+            setWithdrawing(true);
+            try {
+              const res = await withdrawCagnotte(cagnotte.id);
+              await queryClient.invalidateQueries({ queryKey: ['cagnotte', cagnotte.id] });
+              await queryClient.invalidateQueries({ queryKey: ['cagnottes-mine'] });
+              await queryClient.invalidateQueries({ queryKey: ['me'] });
+              Alert.alert(
+                '✅ Fonds retirés',
+                `${fmt(Number(res.net))} FCFA ont été ajoutés à ton solde Donia. La cagnotte est clôturée.`,
+              );
+            } catch (e) {
+              Alert.alert('Retrait impossible', getApiErrorMessage(e));
+            } finally {
+              setWithdrawing(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -235,6 +275,19 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
               </BrandGradient>
             </View>
 
+            {cagnotte.status === 'ACTIVE' && currentUserId === cagnotte.ownerId && Number(cagnotte.totalRaised) > 0 && (
+              <View style={{ paddingHorizontal: 22, marginTop: 12 }}>
+                <Pressable onPress={onWithdraw} disabled={withdrawing} style={styles.withdrawBtn}>
+                  <Text style={styles.withdrawBtnText}>
+                    {withdrawing ? 'Retrait…' : `💰 Retirer ${fmt(Number(cagnotte.totalRaised) * (1 - Number((cagnotte as { commissionPercent?: string }).commissionPercent ?? '3') / 100))} FCFA sur mon solde`}
+                  </Text>
+                  <Text style={styles.withdrawBtnSub}>
+                    Commission Donia : {(cagnotte as { commissionPercent?: string }).commissionPercent ?? '3'}% · {fmt(Number(cagnotte.totalRaised) * Number((cagnotte as { commissionPercent?: string }).commissionPercent ?? '3') / 100)} FCFA
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
             {cagnotte.status === 'ACTIVE' && (
               <View style={{ paddingHorizontal: 22, marginTop: 16 }}>
                 <Button
@@ -315,4 +368,8 @@ const styles = StyleSheet.create({
 
   emptyTitle: { marginTop: 14, fontFamily: fonts.displayMedium, fontSize: 18, color: colors.ink, textAlign: 'center' },
   emptySub: { marginTop: 8, fontSize: 13, color: colors.ink2, textAlign: 'center', lineHeight: 19 },
+
+  withdrawBtn: { padding: 14, borderRadius: 14, backgroundColor: 'rgba(93,191,160,0.18)', borderWidth: 1.5, borderColor: colors.green, alignItems: 'center' },
+  withdrawBtnText: { fontFamily: fonts.displaySemiBold, fontSize: 14, color: colors.green, textAlign: 'center' },
+  withdrawBtnSub: { marginTop: 4, fontSize: 11, color: colors.ink2, textAlign: 'center', fontStyle: 'italic' },
 });
