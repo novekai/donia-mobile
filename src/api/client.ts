@@ -3,7 +3,7 @@ import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/auth';
 
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? 'https://donia-backend-production.up.railway.app';
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://donia-api-production.up.railway.app';
 
 export const api = axios.create({
   baseURL: BASE_URL,

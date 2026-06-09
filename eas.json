@@ -14,7 +14,7 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://donia-backend-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://donia-api-production.up.railway.app"
       }
     },
     "development": {
@@ -38,7 +38,7 @@
         "buildConfiguration": "Release"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://donia-backend-production.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://donia-api-production.up.railway.app"
       }
     }
   },
