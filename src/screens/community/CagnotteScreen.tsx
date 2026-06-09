@@ -2,9 +2,10 @@
 // Si `id` est passe en route param : affiche cette cagnotte.
 // Sinon : affiche la 1ere de mes cagnottes actives, ou ecran vide + CTA "Creer une cagnotte".
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl, Share } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
+import { getMe } from '../../api/me';
 import { FunBackground } from '../../components/deco/FunBackground';
 import { SunRays } from '../../components/deco/SunRays';
 import { Sparkle } from '../../components/deco/Sparkle';
@@ -45,6 +46,8 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
   const explicitId = route.params?.id;
   const [contributing, setContributing] = useState(false);
 
+  const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
+  const balance = Number(meQuery.data?.user.wallet?.balancePrincipal ?? 0);
   const minePromise = useQuery({ queryKey: ['cagnottes-mine'], queryFn: listMyCagnottes, enabled: !explicitId });
   const targetId = explicitId ?? minePromise.data?.items.find((c) => c.status === 'ACTIVE')?.id ?? null;
 
@@ -59,9 +62,24 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
 
   async function onContribute() {
     if (!cagnotte || contributing) return;
+
+    // Garde-fou solde : si solde 0 ou insuffisant pour la cagnotte, on propose direct la recharge.
+    if (balance < 100) {
+      return Alert.alert(
+        'Solde insuffisant',
+        `Tu n'as ${fmt(balance)} FCFA sur ton compte Donia. Recharge ton solde pour contribuer à cette cagnotte.`,
+        [
+          { text: 'Plus tard', style: 'cancel' },
+          { text: 'Recharger mon solde', onPress: () => navigation.navigate('TopUpMethod') },
+        ],
+      );
+    }
+
+    const remaining = Math.max(1, Number(cagnotte.goalAmount) - Number(cagnotte.totalRaised));
+    const maxContrib = Math.min(balance, remaining);
     Alert.prompt(
       'Contribuer à la cagnotte',
-      `Montant en FCFA (min 100, max ${Math.max(1, Number(cagnotte.goalAmount) - Number(cagnotte.totalRaised)).toLocaleString('fr-FR')})`,
+      `Tu as ${fmt(balance)} FCFA. Montant à contribuer (min 100, max ${fmt(maxContrib)}).`,
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -71,15 +89,37 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
             if (!Number.isFinite(amount) || amount < 100) {
               return Alert.alert('Montant invalide', 'Au moins 100 FCFA.');
             }
+            if (amount > balance) {
+              return Alert.alert(
+                'Solde insuffisant',
+                `Tu veux contribuer ${fmt(amount)} FCFA mais tu n'as que ${fmt(balance)} FCFA. Recharge ton solde ou réduis le montant.`,
+                [
+                  { text: 'OK', style: 'cancel' },
+                  { text: 'Recharger', onPress: () => navigation.navigate('TopUpMethod') },
+                ],
+              );
+            }
             setContributing(true);
             try {
               await contributeCagnotte(cagnotte.id, { amount });
               await queryClient.invalidateQueries({ queryKey: ['cagnotte', cagnotte.id] });
               await queryClient.invalidateQueries({ queryKey: ['cagnottes-mine'] });
               await queryClient.invalidateQueries({ queryKey: ['me'] });
-              Alert.alert('Merci !', `Tu as contribué ${amount.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA à la cagnotte.`);
+              Alert.alert('Merci ! 🎉', `Tu as contribué ${fmt(amount)} FCFA à la cagnotte.`);
             } catch (e) {
-              Alert.alert('Contribution impossible', getApiErrorMessage(e));
+              const msg = getApiErrorMessage(e);
+              if (/insufficient|solde/i.test(msg)) {
+                Alert.alert(
+                  'Solde insuffisant',
+                  'Ton solde a changé entre temps. Recharge ton compte pour contribuer.',
+                  [
+                    { text: 'Plus tard', style: 'cancel' },
+                    { text: 'Recharger', onPress: () => navigation.navigate('TopUpMethod') },
+                  ],
+                );
+              } else {
+                Alert.alert('Contribution impossible', msg);
+              }
             } finally {
               setContributing(false);
             }
@@ -87,9 +127,23 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
         },
       ],
       'plain-text',
-      '1000',
+      String(Math.min(1000, maxContrib)),
       'numeric',
     );
+  }
+
+  async function onInvite() {
+    if (!cagnotte) return;
+    const senderName = meQuery.data?.user.name?.split(' ')[0] ?? '';
+    const msg = `${senderName ? `${senderName} t'invite à` : 'Rejoins-moi pour'} contribuer à la cagnotte "${cagnotte.title}" sur Donia 🎁\n\nObjectif : ${fmt(cagnotte.goalAmount)} FCFA\nDéjà collecté : ${fmt(cagnotte.totalRaised)} FCFA\n\nTélécharge Donia : https://doniia.com`;
+    try {
+      await Share.share({
+        title: `Cagnotte ${cagnotte.title}`,
+        message: msg,
+      });
+    } catch {
+      // utilisateur a annule, rien a faire
+    }
   }
 
   return (
@@ -100,7 +154,7 @@ export function CagnotteScreen({ navigation, route }: RootStackScreenProps<'Cagn
         onBack={() => navigation.goBack()}
         rightAction={
           cagnotte && (
-            <Pressable onPress={() => Alert.alert('Bientôt', 'Le partage par lien arrivera bientôt.')}>
+            <Pressable onPress={onInvite}>
               <Text style={styles.invite}>Inviter</Text>
             </Pressable>
           )

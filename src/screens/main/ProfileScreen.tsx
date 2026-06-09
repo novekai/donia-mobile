@@ -15,6 +15,7 @@ import { RootStackScreenProps, RootStackParams } from '../../navigation/types';
 import { getMe, uploadAvatar, deleteAvatar, deleteAccount } from '../../api/me';
 import { getReferral } from '../../api/referral';
 import { listTransactions } from '../../api/transactions';
+import { listMyCagnottes } from '../../api/cagnottes';
 import { getApiErrorMessage } from '../../api/client';
 import { useAuthStore } from '../../store/auth';
 
@@ -43,6 +44,14 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
     queryFn: () => listTransactions({ type: 'RECEIVE', status: 'SUCCESS', limit: 50 }),
     select: (d) => d.items.length,
   });
+  const cagnottesQuery = useQuery({
+    queryKey: ['cagnottes-mine'],
+    queryFn: listMyCagnottes,
+    select: (d) => d.items,
+  });
+  const cagnottes = cagnottesQuery.data ?? [];
+  const activeCagnotte = cagnottes.find((c) => c.status === 'ACTIVE');
+  const cagnottesCount = cagnottes.length;
 
   const storedUser = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -191,6 +200,20 @@ export function ProfileScreen({ navigation }: RootStackScreenProps<'Profile'>) {
     { items: [
       { label: 'Mes cartes envoyées', sub: `${sentCount} carte${sentCount > 1 ? 's' : ''}`, emoji: '📤', color: colors.indigo, action: { kind: 'tab', tabName: 'History' } },
       { label: 'Cartes reçues', sub: `${receivedCount} carte${receivedCount > 1 ? 's' : ''}`, emoji: '📥', color: colors.pink, action: { kind: 'tab', tabName: 'History' } },
+      {
+        label: cagnottesCount > 0 ? 'Mes cagnottes' : 'Créer une cagnotte',
+        sub: cagnottesCount > 0
+          ? activeCagnotte
+            ? `${cagnottesCount} cagnotte${cagnottesCount > 1 ? 's' : ''} · "${activeCagnotte.title}" active`
+            : `${cagnottesCount} cagnotte${cagnottesCount > 1 ? 's' : ''}`
+          : 'Pot commun pour anniversaire, mariage…',
+        emoji: '🎊',
+        color: colors.plum,
+        action: cagnottesCount > 0
+          ? { kind: 'route', route: 'Cagnotte' }
+          : { kind: 'route', route: 'CagnotteCreate' },
+        badge: activeCagnotte ? 'ACTIVE' : undefined,
+      },
       { label: 'Parrainage',
         sub: referralCount > 0
           ? `${referralCount} filleul${referralCount > 1 ? 's' : ''} · ${referralEarned.toLocaleString('fr-FR')} FCFA gagnés`
