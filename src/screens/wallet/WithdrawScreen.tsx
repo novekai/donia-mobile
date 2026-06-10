@@ -44,7 +44,8 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
   const user = meQuery.data?.user;
   const balance = Number(user?.wallet?.balancePrincipal ?? 0);
   const kycApproved = user?.kycStatus === 'APPROVED';
-  const minWithdrawal = settingsQuery.data?.minWithdrawalAmount ?? 500;
+  const minWithdrawal = settingsQuery.data?.minWithdrawalAmount ?? 1000;
+  const withdrawalFee = settingsQuery.data?.withdrawalFeeFixed ?? 200;
 
   const [currency, setCurrency] = useState<Currency>('FCFA');
   const [raw, setRaw] = useState('');
@@ -64,7 +65,9 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
       ? (raw || '0').replace('.', ',')
       : Number(raw || '0').toLocaleString('fr-FR').replace(/,/g, ' ');
 
-  const enough = balance >= amountFcfa;
+  // Le user paie amount + frais. Le solde doit couvrir les 2.
+  const totalNeeded = amountFcfa + withdrawalFee;
+  const enough = balance >= totalNeeded;
   const reachesMin = amountFcfa >= minWithdrawal;
   const destinationValid = isBankCard
     ? accountNumber.replace(/\s/g, '').length >= 8
@@ -206,7 +209,27 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
             <Text style={styles.warn}>⚠️ Minimum requis : {minLabel}.</Text>
           )}
           {amountFcfa > 0 && reachesMin && !enough && (
-            <Text style={styles.warn}>⚠️ Solde insuffisant ({formatAmount(balance, currency)} disponibles).</Text>
+            <Text style={styles.warn}>
+              ⚠️ Solde insuffisant. Il te faut {fmtFcfa(totalNeeded)} FCFA ({fmtFcfa(amountFcfa)} + {fmtFcfa(withdrawalFee)} frais). Tu as {formatAmount(balance, currency)}.
+            </Text>
+          )}
+
+          {/* Recap frais */}
+          {amountFcfa > 0 && reachesMin && (
+            <View style={styles.feeRecap}>
+              <View style={styles.feeRow}>
+                <Text style={styles.feeLabel}>Montant retiré</Text>
+                <Text style={styles.feeValue}>{fmtFcfa(amountFcfa)} FCFA</Text>
+              </View>
+              <View style={styles.feeRow}>
+                <Text style={styles.feeLabel}>Frais de transaction</Text>
+                <Text style={styles.feeValue}>+ {fmtFcfa(withdrawalFee)} FCFA</Text>
+              </View>
+              <View style={[styles.feeRow, styles.feeRowTotal]}>
+                <Text style={styles.feeLabelTotal}>Débité de ton solde</Text>
+                <Text style={styles.feeValueTotal}>{fmtFcfa(totalNeeded)} FCFA</Text>
+              </View>
+            </View>
           )}
         </Card>
 
@@ -310,6 +333,14 @@ const styles = StyleSheet.create({
 
   hint: { marginTop: 8, fontSize: 11, color: colors.ink3, fontStyle: 'italic', lineHeight: 16 },
   warn: { marginTop: 8, fontSize: 12, color: colors.coralDeep, textAlign: 'center', fontFamily: fonts.bodyMedium },
+
+  feeRecap: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: 'rgba(31,68,88,0.06)', borderWidth: 1, borderColor: 'rgba(31,68,88,0.12)' },
+  feeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  feeRowTotal: { marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(31,68,88,0.15)' },
+  feeLabel: { fontSize: 12, color: colors.ink2, fontFamily: fonts.bodyRegular },
+  feeValue: { fontSize: 12, color: colors.ink, fontFamily: fonts.bodyMedium },
+  feeLabelTotal: { fontSize: 13, color: colors.ink, fontFamily: fonts.displaySemiBold },
+  feeValueTotal: { fontSize: 14, color: colors.coralDeep, fontFamily: fonts.bodyBold },
 
   cardInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, height: 50, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.lineSoft },
   cardInputEmoji: { fontSize: 22 },

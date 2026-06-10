@@ -5,6 +5,7 @@ import { apiGet } from './client';
 export type PublicPlatformSettings = {
   minCardAmount: number;       // FCFA
   minWithdrawalAmount: number; // FCFA
+  withdrawalFeeFixed: number;  // FCFA — forfait Donia ajoute au montant retire
   maxAmountNoKyc: number;      // FCFA
   commissionRate: number;      // %
   referralLifetimeActive: boolean;
