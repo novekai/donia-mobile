@@ -45,7 +45,7 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
   const balance = Number(user?.wallet?.balancePrincipal ?? 0);
   const kycApproved = user?.kycStatus === 'APPROVED';
   const minWithdrawal = settingsQuery.data?.minWithdrawalAmount ?? 1000;
-  const withdrawalFee = settingsQuery.data?.withdrawalFeeFixed ?? 200;
+  const withdrawalFee = settingsQuery.data?.withdrawalFeeFixed ?? 0;
 
   const [currency, setCurrency] = useState<Currency>('FCFA');
   const [raw, setRaw] = useState('');
@@ -214,8 +214,8 @@ export function WithdrawScreen({ navigation }: RootStackScreenProps<'Withdraw'>)
             </Text>
           )}
 
-          {/* Recap frais */}
-          {amountFcfa > 0 && reachesMin && (
+          {/* Recap frais : visible seulement si forfait retrait > 0 */}
+          {amountFcfa > 0 && reachesMin && withdrawalFee > 0 && (
             <View style={styles.feeRecap}>
               <View style={styles.feeRow}>
                 <Text style={styles.feeLabel}>Montant retiré</Text>

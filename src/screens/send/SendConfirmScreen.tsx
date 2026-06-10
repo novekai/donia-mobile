@@ -19,6 +19,7 @@ import { RootStackScreenProps } from '../../navigation/types';
 import { createCard, createCardWithMobileMoney } from '../../api/cards';
 import { getApiErrorMessage } from '../../api/client';
 import { getMe } from '../../api/me';
+import { getPlatformSettings } from '../../api/platformSettings';
 import type { CardPalette } from '../../theme/tokens';
 
 type PaymentMethod = 'wallet' | 'mobile_money';
@@ -54,12 +55,15 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
   const [privacyChecked, setPrivacyChecked] = useState(false);
   const queryClient = useQueryClient();
   const meQuery = useQuery({ queryKey: ['me'], queryFn: getMe });
+  const settingsQuery = useQuery({ queryKey: ['platformSettings'], queryFn: getPlatformSettings });
   const senderName = meQuery.data?.user.name?.split(' ')[0] ?? 'Toi';
   const senderPhone = meQuery.data?.user.phone ?? '';
   const balance = Number(meQuery.data?.user.wallet?.balancePrincipal ?? 0);
+  const cardSendFee = settingsQuery.data?.cardSendFeeFixed ?? 200;
   const displayName = recipientName || 'Ton destinataire';
 
   const amountNum = Number(amount.replace(/\s/g, '')) || 0;
+  const totalToPay = amountNum + cardSendFee;
 
   // The `palette` param now supports 3 formats produced by SendStyleScreen:
   //   - "solid:RRGGBB"            → unique custom color
@@ -70,7 +74,7 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
   const occasionLabel = OCCASION_LABEL[categoryKey] ?? 'Bonjour à toi,';
   const defaultMessage = messagePassed ?? `Un petit cadeau pour toi ${recipientName ? recipientName : ''}`.trim();
 
-  const walletEnough = balance >= amountNum;
+  const walletEnough = balance >= totalToPay;
   const [payMethod, setPayMethod] = useState<PaymentMethod>('wallet');
   React.useEffect(() => {
     if (!walletEnough && payMethod === 'wallet') setPayMethod('mobile_money');
@@ -207,22 +211,27 @@ export function SendConfirmScreen({ navigation, route }: RootStackScreenProps<'S
           {[
             { l: t('send.recipient'), v: recipientPhone || '—' },
             { l: t('send.occasion'), v: occasionLabel.replace(/[,!]$/, '') },
-            { l: t('send.cardAmount'), v: `${amount} FCFA` },
-          ].map((r, i) => (
-            <View key={i} style={[styles.recapRow, i < 2 && styles.recapDivider]}>
+            { l: 'Montant de la carte', v: `${amount} FCFA` },
+            ...(cardSendFee > 0 ? [{ l: 'Frais de transaction', v: `+ ${cardSendFee.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA` }] : []),
+          ].map((r, i, arr) => (
+            <View key={i} style={[styles.recapRow, i < arr.length - 1 && styles.recapDivider]}>
               <Text style={styles.recapLabel}>{r.l}</Text>
               <Text style={styles.recapValue}>{r.v}</Text>
             </View>
           ))}
           <View style={[styles.recapRow, { paddingTop: 12 }]}>
             <View>
-              <Text style={styles.totalLabel}>{t('send.totalLabel')}</Text>
+              <Text style={styles.totalLabel}>Total à payer</Text>
               <View style={styles.totalHint}>
                 <IconCheck size={9} color={colors.green} strokeWidth={3} />
-                <Text style={styles.totalHintText}>{t('send.totalHint')}</Text>
+                <Text style={styles.totalHintText}>
+                  {amountNum.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA reçus par {displayName}
+                </Text>
               </View>
             </View>
-            <Text style={styles.totalAmt}>{amount} FCFA</Text>
+            <Text style={styles.totalAmt}>
+              {totalToPay.toLocaleString('fr-FR').replace(/,/g, ' ')} FCFA
+            </Text>
           </View>
         </Card>
 
