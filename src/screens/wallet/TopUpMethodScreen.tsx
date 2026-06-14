@@ -18,6 +18,7 @@ import { fonts } from '../../theme/typography';
 import { RootStackScreenProps } from '../../navigation/types';
 import { getMe } from '../../api/me';
 import { listTransactions } from '../../api/transactions';
+import { getPlatformSettings } from '../../api/platformSettings';
 import type { Transaction } from '../../api/types';
 
 function fmt(s: string | number | undefined): string {
@@ -55,9 +56,17 @@ export function TopUpMethodScreen({ navigation }: RootStackScreenProps<'TopUpMet
     queryFn: () => listTransactions({ limit: 50 }),
     select: (d) => d.items.filter((t) => t.type === 'TOPUP_MOBILE_MONEY' || t.type === 'TOPUP_CODE').slice(0, 5),
   });
+  const settingsQuery = useQuery({
+    queryKey: ['platformSettings'],
+    queryFn: getPlatformSettings,
+    staleTime: 5 * 60_000,
+  });
 
   const balance = Number(meQuery.data?.user.wallet?.balancePrincipal ?? 0);
   const recent = topupsQuery.data ?? [];
+  // Par defaut on considere la CB desactivee tant qu'on n'a pas la reponse du backend
+  // pour eviter de laisser l'option active une fraction de seconde au chargement.
+  const cardEnabled = settingsQuery.data?.cardPaymentEnabled ?? false;
 
   return (
     <ScreenContainer>
@@ -91,20 +100,50 @@ export function TopUpMethodScreen({ navigation }: RootStackScreenProps<'TopUpMet
           </Animated.View>
 
           {/* Carte bancaire */}
-          <Animated.View style={[bobB, { marginTop: 10 }]}>
-            <Pressable onPress={() => navigation.navigate('TopUpCard')}>
-              <BrandGradient variant="plum" style={[styles.option, shadow.indigo]}>
-                <View style={[styles.optIcon, { backgroundColor: 'rgba(253,247,246,0.18)' }]}>
-                  <Text style={{ fontSize: 24 }}>💳</Text>
+          {cardEnabled ? (
+            <Animated.View style={[bobB, { marginTop: 10 }]}>
+              <Pressable onPress={() => navigation.navigate('TopUpCard')}>
+                <BrandGradient variant="plum" style={[styles.option, shadow.indigo]}>
+                  <View style={[styles.optIcon, { backgroundColor: 'rgba(253,247,246,0.18)' }]}>
+                    <Text style={{ fontSize: 24 }}>💳</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.optTitle}>Carte bancaire</Text>
+                    <Text style={styles.optSub}>Visa, Mastercard · paiement sécurisé</Text>
+                  </View>
+                  <IconChevR size={18} color={colors.bg} />
+                </BrandGradient>
+              </Pressable>
+            </Animated.View>
+          ) : (
+            <View style={{ marginTop: 10 }}>
+              <Pressable
+                onPress={() =>
+                  Alert.alert(
+                    'Bientôt disponible',
+                    "Le paiement par carte bancaire (Visa, Mastercard) arrive très vite sur Donia. En attendant, recharge avec Mobile Money ou un code reçu.",
+                  )
+                }
+              >
+                <View style={[styles.option, styles.optionDisabled]}>
+                  <View style={[styles.optIcon, { backgroundColor: 'rgba(111,74,90,0.10)' }]}>
+                    <Text style={{ fontSize: 24, opacity: 0.5 }}>💳</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={[styles.optTitle, { color: colors.ink2 }]}>Carte bancaire</Text>
+                      <View style={styles.soonBadge}>
+                        <Text style={styles.soonBadgeText}>À VENIR</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.optSub, { color: colors.ink3, opacity: 1 }]}>
+                      Visa, Mastercard · bientôt disponible
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optTitle}>Carte bancaire</Text>
-                  <Text style={styles.optSub}>Visa, Mastercard · paiement sécurisé via FedaPay</Text>
-                </View>
-                <IconChevR size={18} color={colors.bg} />
-              </BrandGradient>
-            </Pressable>
-          </Animated.View>
+              </Pressable>
+            </View>
+          )}
 
           {/* Code received */}
           <Animated.View style={[bobB, { marginTop: 10 }]}>
@@ -173,6 +212,9 @@ const styles = StyleSheet.create({
   balanceUnit: { fontSize: 13, color: colors.ink2, fontFamily: fonts.bodyMedium },
   label: { fontFamily: fonts.displayItalic, fontSize: 14, color: colors.ink2 },
   option: { borderRadius: radius.lg, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14, overflow: 'hidden' },
+  optionDisabled: { backgroundColor: 'rgba(111,74,90,0.05)', borderWidth: 1, borderColor: colors.lineSoft },
+  soonBadge: { backgroundColor: colors.ink3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  soonBadgeText: { fontFamily: fonts.bodyBold, fontSize: 9, color: colors.bg, letterSpacing: 0.5 },
   optIcon: { width: 52, height: 52, borderRadius: 14, backgroundColor: 'rgba(253,247,246,0.18)', alignItems: 'center', justifyContent: 'center' },
   optTitle: { fontFamily: fonts.displaySemiBold, fontSize: 16, color: colors.bg },
   optSub: { fontSize: 12, color: colors.bg, opacity: 0.9, marginTop: 2 },

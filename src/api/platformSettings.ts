@@ -9,6 +9,7 @@ export type PublicPlatformSettings = {
   withdrawalFeeFixed: number;  // FCFA — forfait Donia ajoute au montant retire (0 par defaut)
   maxAmountNoKyc: number;      // FCFA
   commissionRate: number;      // %
+  cardPaymentEnabled: boolean; // CB Visa/Mastercard active ? (false = "bientot disponible")
   referralLifetimeActive: boolean;
 };
 
