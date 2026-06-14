@@ -1,6 +1,6 @@
 // History — filtres + summary card indigo + groupes Aujourd'hui / Hier — wiré à l'API
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, RefreshControl, Alert } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/shared/ScreenContainer';
@@ -186,7 +186,31 @@ export function HistoryScreen({ navigation }: MainTabScreenProps<'History'>) {
                     const statusLabel = STATUS_LABELS[t.status];
                     const dim = t.status !== 'SUCCESS';
                     return (
-                      <Pressable key={t.id} onPress={() => navigation.navigate('TxDetail', { txId: t.id, cardId: t.cardId ?? undefined })}>
+                      <Pressable
+                        key={t.id}
+                        onPress={() => {
+                          // Seules les transactions liees a une carte (SEND/RECEIVE) ont un detail visualisable.
+                          // Pour les autres (recharges, retraits, commissions, ajustements), on affiche un resume inline.
+                          if (t.cardId) {
+                            navigation.navigate('TxDetail', { txId: t.id, cardId: t.cardId });
+                            return;
+                          }
+                          const date = new Date(t.createdAt).toLocaleString('fr-FR', {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          });
+                          const statusLabel: Record<TxStatus, string> = {
+                            SUCCESS: 'Réussie', PENDING: 'En attente',
+                            FAILED: 'Échouée', REFUNDED: 'Remboursée',
+                          };
+                          Alert.alert(
+                            meta.whoPrefix,
+                            `Montant : ${sign}${fmt(t.amount)} FCFA\n` +
+                              `Statut : ${statusLabel[t.status] ?? t.status}\n` +
+                              `Date : ${date}`,
+                          );
+                        }}
+                      >
                         <View style={[styles.row, i < g.items.length - 1 && styles.rowDivider]}>
                           <View style={[styles.avatar, { backgroundColor: meta.color }, dim && { opacity: 0.55 }]}>
                             <Text style={styles.avatarText}>{meta.initial}</Text>
